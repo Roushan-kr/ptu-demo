@@ -26,6 +26,8 @@ enum InviteStatus {
 
 enum BatchStatus {
   PROCESSING
+  UPLOADED
+  INVITED
   COMPLETED
   PARTIAL_FAILED
 }
@@ -99,17 +101,29 @@ model InvitationBatch {
 model Alumni {
   id            String       @id @default(cuid())
   name          String
-  email         String       @unique
+  email         String       @unique   // current active email (can be updated)
+  originalInvitedEmail String?           // original email from CSV import
   enrollmentNo  String?
   batchYear     Int
-  branch        String                         // e.g. "Computer Science"
-  course        String?                        // e.g. "B.Tech", "MBA"
+  branch        String
+  college       String
+  course        String?
   phone         String?
-  inviteToken   String?      @unique           // UUID token in email link
+  inviteToken   String?      @unique
   inviteStatus  InviteStatus @default(PENDING)
   isRegistered  Boolean      @default(false)
 
-  // Profile fields — filled by alumni after clicking registration link
+  // OAuth provider IDs
+  googleId      String?      @unique
+  linkedinId    String?      @unique
+
+  // Password for manual registration (only if registered manually)
+  passwordHash  String?
+
+  // Alumni session refresh tokens (JWT rotation)
+  alumniRefreshTokens String[]
+
+  // Profile fields (filled by alumni)
   currentRole    String?
   currentCompany String?
   city           String?
@@ -117,25 +131,27 @@ model Alumni {
   avatarUrl      String?
   bio            String?
 
-  // Foreign keys
+  // Tracking
   importedById  String?
   importedBy    Staff?            @relation(fields: [importedById], references: [id])
   batchId       String?
   batch         InvitationBatch?  @relation(fields: [batchId], references: [id])
-
   invitedAt     DateTime?
   registeredAt  DateTime?
+  lastLoginAt   DateTime?
   createdAt     DateTime    @default(now())
 
   // Relations
   rsvps         Rsvp[]
   emailLogs     EmailLog[]
 
-  // Indexes for fast queries
   @@index([batchYear])
   @@index([branch])
+  @@index([college])
+  @@index([course])
   @@index([inviteStatus])
   @@index([inviteToken])
+  @@index([originalInvitedEmail])
   @@map("alumni")
 }
 

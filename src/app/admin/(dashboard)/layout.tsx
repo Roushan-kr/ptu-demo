@@ -4,10 +4,11 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, LogOut, Users, Calendar, Home } from 'lucide-react';
+import { Menu, X, LogOut, Users, Calendar, Home, Import } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
+  { name: 'Import Alumni', href: '/admin/import', icon: Import},
   { name: 'Alumni', href: '/admin/alumni', icon: Users },
   { name: 'Events', href: '/admin/events', icon: Calendar },
 ];

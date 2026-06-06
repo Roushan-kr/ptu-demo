@@ -14,7 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PTU Alumni",
-  description: "PTU Alumni Management System",
+  description: "PTU Alumni Connect",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({

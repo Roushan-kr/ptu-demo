@@ -17,6 +17,7 @@ export const config = {
     '/admin/dashboard/:path*',
     '/admin/alumni/:path*',
     '/admin/events/:path*',
+    '/admin/import/:path*',
     '/admin/auth/login',
     '/admin/auth/register',
   ],

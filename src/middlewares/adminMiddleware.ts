@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const protectedRoutes = ['/admin/dashboard', '/admin/alumni', '/admin/events']
+const protectedRoutes = ['/admin/dashboard', '/admin/alumni', '/admin/events', '/admin/import']
 const authRoutes = ['/admin/auth/login', '/admin/auth/register']
 
 export const adminMiddlewareMatcher = [
   '/admin/dashboard/:path*',
   '/admin/alumni/:path*',
   '/admin/events/:path*',
+  '/admin/import/:path*',
   '/admin/auth/login',
   '/admin/auth/register',
 ]
