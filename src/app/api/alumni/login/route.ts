@@ -30,6 +30,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
+    // ─── NEW GUARD: WORKFLOW STATUS VERIFICATION ───────────────────────────
+    // Protects against unapproved self-registrations or pending CSV records
+    if (!alumni.isRegistered) {
+      return NextResponse.json(
+        { 
+          error: 'Your account is not fully activated yet. If you recently self-registered, your request is likely pending admin review. If you received an invitation email, please use the link provided to set up your account.' 
+        }, 
+        { status: 403 } // 403 Forbidden is ideal for unactivated profiles
+      );
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
     // Check if alumni registered manually (has password hash)
     if (!alumni.passwordHash) {
       return NextResponse.json(

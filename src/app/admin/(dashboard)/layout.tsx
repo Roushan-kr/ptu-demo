@@ -11,6 +11,7 @@ const navItems = [
   { name: 'Import Alumni', href: '/admin/import', icon: Import},
   { name: 'Alumni', href: '/admin/alumni', icon: Users },
   { name: 'Events', href: '/admin/events', icon: Calendar },
+  { name: 'Registration Requests', href: '/admin/requests', icon: Users },
 ];
 
 export default function DashboardLayout({

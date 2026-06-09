@@ -18,7 +18,8 @@ export const config = {
     '/admin/alumni/:path*',
     '/admin/events/:path*',
     '/admin/import/:path*',
-    '/admin/auth/login',
-    '/admin/auth/register',
+    '/admin/requests/:path*',
+    '/admin/auth/login',   
+    '/admin/auth/register', 
   ],
 }
