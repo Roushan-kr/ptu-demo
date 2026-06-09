@@ -18,10 +18,10 @@ enum StaffRole {
 }
 
 enum InviteStatus {
-  PENDING       // imported from CSV, email not sent yet
-  INVITED       // invitation email sent
-  REGISTERED    // alumni completed registration
-  BOUNCED       // email delivery failed
+  PENDING // imported from CSV, email not sent yet
+  INVITED // invitation email sent
+  REGISTERED // alumni completed registration
+  BOUNCED // email delivery failed
 }
 
 enum BatchStatus {
@@ -63,26 +63,27 @@ model Staff {
   passwordHash String
   role         StaffRole @default(ADMIN)
   createdAt    DateTime  @default(now())
-  
+
   // OTP fields for email verification
   otpHash      String?
   otpExpiresAt DateTime?
   isVerified   Boolean   @default(false)
-  
+
   // Refresh tokens for JWT rotation
-  refreshTokens String[]   // Prisma scalar list
+  refreshTokens String[] // Prisma scalar list
 
   // Relations
-  batches        InvitationBatch[]
-  events         Event[]
-  importedAlumni Alumni[]
+  batches          InvitationBatch[]
+  events           Event[]
+  importedAlumni   Alumni[]
+  reviewedRequests RegistrationRequest[]
 
   @@map("staff")
 }
 
 model InvitationBatch {
   id          String      @id @default(cuid())
-  label       String                          // e.g. "CSE Batch 2019"
+  label       String // e.g. "CSE Batch 2019"
   csvFilename String?
   totalCount  Int         @default(0)
   sentCount   Int         @default(0)
@@ -93,32 +94,32 @@ model InvitationBatch {
   createdAt   DateTime    @default(now())
   completedAt DateTime?
 
-  alumni      Alumni[]
+  alumni Alumni[]
 
   @@map("invitation_batches")
 }
 
 model Alumni {
-  id            String       @id @default(cuid())
-  name          String
-  email         String       @unique   // current active email (can be updated)
-  originalInvitedEmail String?           // original email from CSV import
-  enrollmentNo  String?
-  batchYear     Int
-  branch        String
-  college       String
-  course        String?
-  phone         String?
-  inviteToken   String?      @unique
-  inviteStatus  InviteStatus @default(PENDING)
-  isRegistered  Boolean      @default(false)
+  id                   String       @id @default(cuid())
+  name                 String
+  email                String       @unique // current active email (can be updated)
+  originalInvitedEmail String? // original email from CSV import
+  enrollmentNo         String?
+  batchYear            Int
+  branch               String
+  college              String
+  course               String?
+  phone                String?
+  inviteToken          String?      @unique
+  inviteStatus         InviteStatus @default(PENDING)
+  isRegistered         Boolean      @default(false)
 
   // OAuth provider IDs
-  googleId      String?      @unique
-  linkedinId    String?      @unique
+  googleId   String? @unique
+  linkedinId String? @unique
 
   // Password for manual registration (only if registered manually)
-  passwordHash  String?
+  passwordHash String?
 
   // Alumni session refresh tokens (JWT rotation)
   alumniRefreshTokens String[]
@@ -132,18 +133,18 @@ model Alumni {
   bio            String?
 
   // Tracking
-  importedById  String?
-  importedBy    Staff?            @relation(fields: [importedById], references: [id])
-  batchId       String?
-  batch         InvitationBatch?  @relation(fields: [batchId], references: [id])
-  invitedAt     DateTime?
-  registeredAt  DateTime?
-  lastLoginAt   DateTime?
-  createdAt     DateTime    @default(now())
+  importedById String?
+  importedBy   Staff?           @relation(fields: [importedById], references: [id])
+  batchId      String?
+  batch        InvitationBatch? @relation(fields: [batchId], references: [id])
+  invitedAt    DateTime?
+  registeredAt DateTime?
+  lastLoginAt  DateTime?
+  createdAt    DateTime         @default(now())
 
   // Relations
-  rsvps         Rsvp[]
-  emailLogs     EmailLog[]
+  rsvps     Rsvp[]
+  emailLogs EmailLog[]
 
   @@index([batchYear])
   @@index([branch])
@@ -168,8 +169,8 @@ model Event {
   createdBy     Staff     @relation(fields: [createdById], references: [id])
   createdAt     DateTime  @default(now())
 
-  rsvps         Rsvp[]
-  emailLogs     EmailLog[]
+  rsvps     Rsvp[]
+  emailLogs EmailLog[]
 
   @@map("events")
 }
@@ -184,25 +185,65 @@ model Rsvp {
   message     String?
   respondedAt DateTime   @default(now())
 
-  @@unique([alumniId, eventId])  // one RSVP per alumni per event
+  @@unique([alumniId, eventId]) // one RSVP per alumni per event
   @@index([eventId])
   @@map("rsvps")
 }
 
 model EmailLog {
-  id              String      @id @default(cuid())
-  recipientEmail  String
-  alumniId        String?
-  alumni          Alumni?     @relation(fields: [alumniId], references: [id])
-  eventId         String?
-  event           Event?      @relation(fields: [eventId], references: [id])
-  type            EmailType
-  status          EmailStatus @default(QUEUED)
-  brevoMessageId  String?     // ID returned by Brevo API for tracking
-  errorMessage    String?
-  sentAt          DateTime    @default(now())
+  id             String      @id @default(cuid())
+  recipientEmail String
+  alumniId       String?
+  alumni         Alumni?     @relation(fields: [alumniId], references: [id])
+  eventId        String?
+  event          Event?      @relation(fields: [eventId], references: [id])
+  type           EmailType
+  status         EmailStatus @default(QUEUED)
+  brevoMessageId String? // ID returned by Brevo API for tracking
+  errorMessage   String?
+  sentAt         DateTime    @default(now())
 
   @@index([recipientEmail])
   @@index([alumniId])
   @@map("email_logs")
+}
+
+// 1. Add a new Enum for Request Statuses
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// 2. Add the Registration Request Staging Model
+model RegistrationRequest {
+  id           String  @id @default(cuid())
+  name         String
+  email        String  @unique // Prevents duplicate concurrent requests
+  enrollmentNo String?
+  batchYear    Int
+  branch       String
+  college      String
+  course       String?
+  phone        String?
+
+  // Registration Type Tracking
+  authProvider String // "GOOGLE", "LINKEDIN", or "MANUAL"
+  providerId   String? // Stores googleId or linkedinId if applicable
+  passwordHash String? // Stores hashed password if manual
+
+  // Workflow Fields
+  status          RequestStatus @default(PENDING)
+  rejectionReason String? // Good UX so admins can state why they rejected
+
+  // Admin Tracking Relations
+  reviewedById String?
+  reviewedBy   Staff?  @relation(fields: [reviewedById], references: [id])
+
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status])
+  @@map("registration_requests")
 }
