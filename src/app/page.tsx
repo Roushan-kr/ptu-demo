@@ -27,8 +27,8 @@ export default async function HomePage() {
       <nav className="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-br from-[#C41E3A] to-[#003D7A] rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
-              PTU
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
+              <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-gray-900 tracking-tight leading-none mb-1">IKGPTU Alumni</h1>

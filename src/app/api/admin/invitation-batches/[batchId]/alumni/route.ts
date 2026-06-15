@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
+import {
+  getAuthenticatedStaff,
+  resolveCampusScope,
+  assertBatchCampusAccess,
+  CampusScopeError,
+} from '@/lib/auth/staff-auth';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ batchId: string }> }
 ) {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get('accessToken')?.value;
-  if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  try {
-    verifyAccessToken(accessToken);
-  } catch {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  const staff = await getAuthenticatedStaff();
+  if (!staff) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { batchId } = await params;
@@ -24,7 +23,25 @@ export async function GET(
   const limit = Math.min(50, Math.max(5, parseInt(searchParams.get('limit') || '10', 10)));
   const skip = (page - 1) * limit;
 
-  const where: any = { batchId };
+  let scopedCampusId: string | null;
+  try {
+    scopedCampusId = resolveCampusScope(staff, searchParams.get('campusId'));
+  } catch (err) {
+    if (err instanceof CampusScopeError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
+  const hasAccess = await assertBatchCampusAccess(batchId, scopedCampusId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+  }
+
+  const where: Record<string, unknown> = { batchId };
+  if (scopedCampusId) {
+    where.campusId = scopedCampusId;
+  }
   if (status === 'PENDING') {
     where.inviteStatus = 'PENDING';
     where.isRegistered = false;

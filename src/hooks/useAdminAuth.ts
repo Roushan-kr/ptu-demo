@@ -6,6 +6,8 @@ interface AdminUser {
   name: string;
   email: string;
   role: string;
+  campus?: { id: string; name: string } | null;
+  modules?: string[];
 }
 
 export function useAdminAuth() {

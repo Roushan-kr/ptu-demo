@@ -20,13 +20,15 @@ type NormalizedImportRecord = {
   isRegistered: false;
   importedById: string;
   batchId: string;
+  campusId: string;
 };
 
 export async function processImportBatch(
   rows: AlumniImportRow[],
   batchLabel: string,
   adminId: string,
-  fileName: string
+  fileName: string,
+  campusId: string
 ): Promise<ImportResult> {
   const result: ImportResult = {
     success: 0,
@@ -119,6 +121,7 @@ export async function processImportBatch(
       isRegistered: false,
       importedById: adminId,
       batchId: batch.id,
+      campusId: campusId,
     });
     seenEmails.add(normalizedEmail);
   }

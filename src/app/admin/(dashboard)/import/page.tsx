@@ -20,6 +20,7 @@ type BatchRow = {
   inviteStatus: 'PENDING' | 'COMPLETED';
   invitedCount: number;
   alumniCount: number;
+  campusName?: string | null;
   createdAt: string;
   completedAt: string | null;
 };
@@ -58,19 +59,38 @@ export default function ImportPage() {
   const [modalPage, setModalPage] = useState(1);
   const [modalPages, setModalPages] = useState(1);
   const [modalStatus, setModalStatus] = useState<'ALL' | 'PENDING' | 'INVITED' | 'REGISTERED'>('ALL');
+  const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([]);
+  const [campusId, setCampusId] = useState('');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [assignedCampusName, setAssignedCampusName] = useState<string | null>(null);
+  const [historyCampusFilter, setHistoryCampusFilter] = useState('');
+
+  useEffect(() => {
+    axiosClient.get('/api/admin/me')
+      .then(res => {
+        setUserRole(res.data.user?.role ?? null);
+        setAssignedCampusName(res.data.user?.campus?.name ?? null);
+      })
+      .catch(() => {});
+    axiosClient.get('/api/admin/campuses')
+      .then(res => setCampuses(res.data))
+      .catch(() => {});
+  }, []);
 
   const fetchBatches = async () => {
     setTableLoading(true);
     setTableError('');
     try {
-      const res = await axiosClient.get('/api/admin/invitation-batches', {
-        params: {
-          label: labelFilter,
-          status: statusFilter,
-          page,
-          limit: 8,
-        },
-      });
+      const params: Record<string, string | number> = {
+        label: labelFilter,
+        status: statusFilter,
+        page,
+        limit: 8,
+      };
+      if (userRole === 'ADMIN' && historyCampusFilter) {
+        params.campusId = historyCampusFilter;
+      }
+      const res = await axiosClient.get('/api/admin/invitation-batches', { params });
       setBatches(res.data.data || []);
       setPages(res.data.pagination?.pages || 1);
     } catch (err: any) {
@@ -81,18 +101,20 @@ export default function ImportPage() {
   };
 
   useEffect(() => {
+    if (userRole === null) return;
     fetchBatches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter]);
+  }, [page, statusFilter, historyCampusFilter, userRole]);
 
   useEffect(() => {
+    if (userRole === null) return;
     const timer = setTimeout(() => {
       setPage(1);
       fetchBatches();
     }, 350);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labelFilter]);
+  }, [labelFilter, userRole]);
 
   const fetchBatchAlumni = async (batchId: string, pageNo = 1, status = modalStatus) => {
     setModalLoading(true);
@@ -154,6 +176,14 @@ export default function ImportPage() {
     formData.append('file', file);
     formData.append('batchLabel', batchLabel);
 
+    if (userRole === 'ADMIN') {
+      if (!campusId) {
+        setError('Please select a campus');
+        return;
+      }
+      formData.append('campusId', campusId);
+    }
+
     try {
       const res = await axiosClient.post('/api/admin/import-alumni', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -163,6 +193,7 @@ export default function ImportPage() {
       setBatchLabel('');
       setPage(1);
       fetchBatches();
+      setCampusId('');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Import failed');
     } finally {
@@ -179,6 +210,11 @@ export default function ImportPage() {
         <p className="relative mt-2 max-w-4xl text-sm text-blue-50 md:text-base">
           Upload CSV/Excel Files, Validate Data Quality, and Track each Invitation Batch in One Place.
         </p>
+        {userRole === 'SUB_ADMIN' && assignedCampusName && (
+          <p className="relative mt-2 text-sm text-blue-100">
+            Your campus: <span className="font-semibold">{assignedCampusName}</span>
+          </p>
+        )}
         <div className="relative mt-4 flex items-center gap-2 text-xs text-blue-100">
           <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-green-300" />
         </div>
@@ -201,6 +237,24 @@ export default function ImportPage() {
                 className="mt-2 w-full rounded-xl border text-slate-800 border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
               />
             </div>
+            
+            {userRole === 'ADMIN' && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-800">Select Campus *</label>
+                <select
+                  value={campusId}
+                  onChange={(e) => setCampusId(e.target.value)}
+                  required
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-slate-800 text-sm outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">-- Select Campus --</option>
+                  {campuses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="md:col-span-3">
               <label className="block text-sm font-semibold text-slate-800">Data File</label>
               <label className="mt-2 flex min-h-[84px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-[#4671c9] bg-gradient-to-r from-[#edf3ff] to-[#fff1f5] px-4 py-3 transition duration-300 hover:border-[#cc1f4a]">
@@ -271,6 +325,21 @@ export default function ImportPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-slate-900">Upload History</h2>
           <div className="flex flex-wrap items-center gap-2">
+            {userRole === 'ADMIN' && (
+              <select
+                value={historyCampusFilter}
+                onChange={(e) => {
+                  setHistoryCampusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-lg border text-slate-800 border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1f46a3] focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">All Campuses</option>
+                {campuses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
             <input
               type="text"
               value={labelFilter}
@@ -300,6 +369,7 @@ export default function ImportPage() {
             <thead className="bg-slate-900 text-xs uppercase tracking-wide text-slate-100">
               <tr>
                 <th className="px-4 py-3">Upload Label</th>
+                {userRole === 'ADMIN' && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">Invite Status</th>
                 <th className="px-4 py-3">Rows</th>
                 <th className="px-4 py-3">Invited</th>
@@ -312,16 +382,19 @@ export default function ImportPage() {
             <tbody>
               {tableLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">Loading batches...</td>
+                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-4 py-6 text-center text-slate-500">Loading batches...</td>
                 </tr>
               ) : batches.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">No uploads found for current filters.</td>
+                  <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-4 py-6 text-center text-slate-500">No uploads found for current filters.</td>
                 </tr>
               ) : (
                 batches.map((batch) => (
                   <tr key={batch.id} className="border-t border-slate-100 hover:bg-slate-50/70">
                     <td className="px-4 py-3 font-medium text-slate-800">{batch.label}</td>
+                    {userRole === 'ADMIN' && (
+                      <td className="px-4 py-3 text-slate-600">{batch.campusName || '-'}</td>
+                    )}
                     <td className="px-4 py-3">
                       <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusPillClass[batch.inviteStatus]}`}>
                         {batch.inviteStatus === 'PENDING' ? 'UPLOADED' : 'INVITED'}

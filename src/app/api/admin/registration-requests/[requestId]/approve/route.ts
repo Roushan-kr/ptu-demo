@@ -1,40 +1,69 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAccessToken } from '@/lib/auth/jwt'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server';
+import { StaffRole } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { getAuthenticatedStaff, CampusScopeError } from '@/lib/auth/staff-auth';
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
-    const accessToken = req.cookies.get('accessToken')?.value
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const payload = verifyAccessToken(accessToken)
-    const reviewedById = payload.id
-
-    const staff = await prisma.staff.findUnique({ where: { id: reviewedById } })
+    const staff = await getAuthenticatedStaff();
     if (!staff) {
-      return NextResponse.json({ error: 'Authenticated staff user not found' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { requestId } = await params
+    const { requestId } = await params;
+    const body = await req.json().catch(() => ({}));
+    const overrideCampusId = typeof body.campusId === 'string' ? body.campusId.trim() : '';
 
     const existingRequest = await prisma.registrationRequest.findUnique({
       where: { id: requestId },
-    })
+      include: { campus: { select: { id: true, name: true } } },
+    });
 
     if (!existingRequest) {
-      return NextResponse.json({ error: 'Registration request not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Registration request not found' }, { status: 404 });
     }
 
     if (existingRequest.status !== 'PENDING') {
       return NextResponse.json(
         { error: 'This registration request has already been reviewed' },
         { status: 400 }
-      )
+      );
+    }
+
+    let finalCampusId: string | null;
+
+    if (staff.role === StaffRole.ADMIN) {
+      finalCampusId = overrideCampusId || existingRequest.campusId;
+    } else {
+      if (!staff.campusId) {
+        return NextResponse.json({ error: 'Your account is not linked to any campus' }, { status: 403 });
+      }
+      finalCampusId = staff.campusId;
+    }
+
+    if (!finalCampusId) {
+      return NextResponse.json(
+        { error: 'Campus assignment is required. The request has no campus — please assign one when approving.' },
+        { status: 400 }
+      );
+    }
+
+    const campus = await prisma.campus.findUnique({ where: { id: finalCampusId } });
+    if (!campus) {
+      return NextResponse.json({ error: 'Invalid campus' }, { status: 400 });
+    }
+
+    const duplicateAlumni = await prisma.alumni.findUnique({
+      where: { email: existingRequest.email },
+    });
+    if (duplicateAlumni) {
+      return NextResponse.json(
+        { error: 'An alumni account with this email already exists' },
+        { status: 400 }
+      );
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -42,10 +71,11 @@ export async function POST(
         where: { id: requestId },
         data: {
           status: 'APPROVED',
-          reviewedById,
+          campusId: finalCampusId,
+          reviewedById: staff.id,
           reviewedAt: new Date(),
         },
-      })
+      });
 
       const newAlumni = await tx.alumni.create({
         data: {
@@ -57,29 +87,33 @@ export async function POST(
           college: existingRequest.college,
           course: existingRequest.course,
           phone: existingRequest.phone,
+          campusId: finalCampusId,
           isRegistered: true,
           inviteStatus: 'REGISTERED',
           registeredAt: new Date(),
-          
-          // Conditionally mapping the authentication credential variables
           googleId: existingRequest.authProvider === 'GOOGLE' ? existingRequest.providerId : null,
           linkedinId: existingRequest.authProvider === 'LINKEDIN' ? existingRequest.providerId : null,
           passwordHash: existingRequest.authProvider === 'MANUAL' ? existingRequest.passwordHash : null,
-          
-          alumniRefreshTokens: [], // Initializing scalar array field
+          alumniRefreshTokens: [],
+          currentRole: existingRequest.currentRole,
+          currentCompany: existingRequest.currentCompany,
         },
-      })
-      return { updatedRequest, newAlumni }
-    })
+      });
 
-    return NextResponse.json({ 
-      message: 'Registration request approved and alumni account activated.', 
+      return { updatedRequest, newAlumni };
+    });
+
+    return NextResponse.json({
+      message: 'Registration request approved and alumni account activated.',
       request: result.updatedRequest,
-      alumniId: result.newAlumni.id
-    })
-
+      alumniId: result.newAlumni.id,
+      campus: { id: campus.id, name: campus.name },
+    });
   } catch (error) {
-    console.error('[APPROVE_REGISTRATION_REQUEST]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    if (error instanceof CampusScopeError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    console.error('[APPROVE_REGISTRATION_REQUEST]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

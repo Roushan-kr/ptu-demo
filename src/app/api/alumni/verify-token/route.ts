@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     where: {
       inviteToken: token,
       inviteStatus: { in: ['PENDING', 'INVITED'] },
+      isRegistered: false,
     },
     select: {
       id: true,
@@ -18,12 +19,24 @@ export async function GET(req: NextRequest) {
       batchYear: true,
       branch: true,
       college: true,
+      course: true,
       email: true,
       originalInvitedEmail: true,
+      campus: { select: { id: true, name: true } },
     },
   });
 
   if (!alumni) {
+    const alreadyRegistered = await prisma.alumni.findFirst({
+      where: { inviteToken: token, isRegistered: true },
+      select: { id: true },
+    });
+    if (alreadyRegistered) {
+      return NextResponse.json(
+        { valid: false, error: 'This invitation has already been used. Please sign in with your credentials.' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json({ valid: false, error: 'Invalid or expired token' }, { status: 404 });
   }
 
@@ -35,7 +48,9 @@ export async function GET(req: NextRequest) {
       batchYear: alumni.batchYear,
       branch: alumni.branch,
       college: alumni.college,
+      course: alumni.course,
       email: alumni.email,
+      campus: alumni.campus,
     },
   });
 }

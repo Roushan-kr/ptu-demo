@@ -27,21 +27,19 @@ export default async function ProtectedAlumniLayout({
     <div className="min-h-screen bg-slate-50/60 pb-24 antialiased selection:bg-[#C41E3A]/10">
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
             <div className="flex items-center gap-3.5">
               {/* Refined Institutional Crest Wrapper */}
-              <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#C41E3A] via-[#003D7A] to-[#002654] font-serif font-bold text-white shadow-md shadow-blue-900/10 ring-2 ring-amber-400/20">
-                <span className="text-sm tracking-wider">PTU</span>
-                <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-white" />
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
+                <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
               </div>
               
               <Link href="/" className="group block focus:outline-none">
                 <h1 className="text-md font-extrabold tracking-tight text-slate-900 sm:text-lg group-hover:text-[#003D7A] transition-colors">
-                  I.K. Gujral PTU
+                  I.K.G. Punjab Technical University
                 </h1>
                 <p className="text-xs font-medium text-slate-500 tracking-wide uppercase transition-colors group-hover:text-[#C41E3A]">
-                  Alumni Relations Engine
+                  Alumni Relations
                 </p>
               </Link>
             </div>
@@ -51,7 +49,6 @@ export default async function ProtectedAlumniLayout({
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Portal Connected
             </div>
-          </div>
         </div>
       </header>
 

@@ -4,14 +4,24 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, LogOut, Users, Calendar, Home, Import } from 'lucide-react';
+import { Menu, X, LogOut, Users, Calendar, Home, Import, LucideIcon } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
-const navItems = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
-  { name: 'Import Alumni', href: '/admin/import', icon: Import},
-  { name: 'Alumni', href: '/admin/alumni', icon: Users },
-  { name: 'Events', href: '/admin/events', icon: Calendar },
-  { name: 'Registration Requests', href: '/admin/requests', icon: Users },
+// Define the shape of a navigation item
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  module: string;
+}
+
+// All possible modules (used for filtering)
+const allModules: NavItem[] = [
+  { name: 'Dashboard', href: '/admin/dashboard', icon: Home, module: 'dashboard' },
+  { name: 'Import Alumni', href: '/admin/import', icon: Import, module: 'import' },
+  { name: 'Alumni', href: '/admin/alumni', icon: Users, module: 'alumni' },
+  { name: 'Events', href: '/admin/events', icon: Calendar, module: 'events' },
+  { name: 'Registration Requests', href: '/admin/requests', icon: Users, module: 'requests' },
 ];
 
 export default function DashboardLayout({
@@ -30,6 +40,26 @@ export default function DashboardLayout({
     }
   }, [loading, user, router]);
 
+  // Build dynamic nav items based on role and modules
+  let navItems: NavItem[] = []; // ✅ explicit type
+  if (user) {
+    if (user.role === 'ADMIN') {
+      // Admin sees everything
+      navItems = [...allModules];
+      // Add Sub-Admins link only for admin
+      navItems.unshift({ 
+        name: 'Sub-Admins', 
+        href: '/admin/subadmins', 
+        icon: Users, 
+        module: 'subadmins' 
+      });
+    } else {
+      // Sub-admin: filter modules by permissions
+      const allowedModules = user.modules || [];
+      navItems = allModules.filter(item => allowedModules.includes(item.module));
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#012140] flex items-center justify-center">
@@ -42,6 +72,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -56,8 +87,11 @@ export default function DashboardLayout({
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-          <span className="text-lg font-semibold">Alumni Connect</span>
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-9">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider">
+              <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
+            </div>
+          <span className="text-lg font-semibold">IKGPTU Alumni</span>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden"
@@ -110,7 +144,7 @@ export default function DashboardLayout({
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="text-right">
+            <div className="text-left">
               <p className="text-sm font-medium text-gray-900">{user.name}</p>
               <p className="text-xs text-gray-500">{user.email}</p>
             </div>

@@ -7,19 +7,21 @@ import { processImportBatch } from '@/lib/import-db-service';
 import { isValidFileType } from '@/lib/import-utils';
 
 export async function POST(req: NextRequest) {
-  // 1. Authenticate via cookie (our JWT system)
+  // 1. Authenticate and get staff details
   const cookieStore = await cookies();
   const accessToken = cookieStore.get('accessToken')?.value;
   if (!accessToken) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  let adminId: string;
+
+  let staff;
   try {
     const payload = verifyAccessToken(accessToken);
-    adminId = payload.id;
-    // Optional: verify admin exists
-    const admin = await prisma.staff.findUnique({ where: { id: adminId } });
-    if (!admin) throw new Error('Admin not found');
+    staff = await prisma.staff.findUnique({
+      where: { id: payload.id },
+      include: { campus: true }, // get campus relation for sub-admin
+    });
+    if (!staff) throw new Error('Staff not found');
   } catch {
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
   }
@@ -28,7 +30,9 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   const batchLabel = formData.get('batchLabel') as string | null;
+  const campusId = formData.get('campusId') as string | null; // only sent by admin
 
+  // Validate file and batch label
   if (!file) {
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
   }
@@ -39,7 +43,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Only .csv, .xlsx, .xls files are allowed' }, { status: 400 });
   }
 
-  // 3. Parse file
+  // 3. Determine target campus ID
+  let targetCampusId: string;
+  if (staff.role === 'ADMIN') {
+    if (!campusId) {
+      return NextResponse.json({ error: 'Campus selection is required for admin' }, { status: 400 });
+    }
+    const campus = await prisma.campus.findUnique({ where: { id: campusId } });
+    if (!campus) {
+      return NextResponse.json({ error: 'Invalid campus selected' }, { status: 400 });
+    }
+    targetCampusId = campusId;
+  } else {
+    // SUB_ADMIN or COORDINATOR must have a campus assigned
+    if (!staff.campusId) {
+      return NextResponse.json({ error: 'Your account is not linked to any campus' }, { status: 403 });
+    }
+    targetCampusId = staff.campusId;
+  }
+
+  // 4. Parse file
   let rows;
   try {
     rows = await parseFile(file);
@@ -51,9 +74,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'File contains no valid data rows' }, { status: 400 });
   }
 
-  // 4. Process import
+  // 5. Process import – pass campusId to the batch processor
   try {
-    const result = await processImportBatch(rows, batchLabel, adminId, file.name);
+    const result = await processImportBatch(
+      rows,
+      batchLabel,
+      staff.id,      // adminId
+      file.name,
+      targetCampusId // new parameter
+    );
     return NextResponse.json({
       message: `Import completed. ${result.success} inserted, ${result.failed} failed.`,
       result,

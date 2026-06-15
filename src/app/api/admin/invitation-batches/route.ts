@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
+import {
+  getAuthenticatedStaff,
+  resolveCampusScope,
+  batchCampusWhere,
+  CampusScopeError,
+} from '@/lib/auth/staff-auth';
 
 type InviteStatusFilter = 'PENDING' | 'COMPLETED';
 
@@ -10,16 +14,9 @@ function mapInviteStatus(batchStatus: string): InviteStatusFilter {
 }
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get('accessToken')?.value;
-  if (!accessToken) {
+  const staff = await getAuthenticatedStaff();
+  if (!staff) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    verifyAccessToken(accessToken);
-  } catch {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -29,7 +26,19 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, Math.max(5, parseInt(searchParams.get('limit') || '10', 10)));
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  let scopedCampusId: string | null;
+  try {
+    scopedCampusId = resolveCampusScope(staff, searchParams.get('campusId'));
+  } catch (err) {
+    if (err instanceof CampusScopeError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
+  const where: Record<string, unknown> = {
+    ...batchCampusWhere(scopedCampusId),
+  };
   if (label) {
     where.label = { contains: label, mode: 'insensitive' };
   }
@@ -48,33 +57,49 @@ export async function GET(req: NextRequest) {
       include: {
         _count: {
           select: {
-            alumni: true,
+            alumni: scopedCampusId
+              ? { where: { campusId: scopedCampusId } }
+              : true,
           },
         },
         alumni: {
+          where: scopedCampusId ? { campusId: scopedCampusId } : undefined,
           select: {
             inviteStatus: true,
+            campusId: true,
+            campus: { select: { id: true, name: true } },
           },
+        },
+        createdBy: {
+          select: { name: true, role: true },
         },
       },
     }),
     prisma.invitationBatch.count({ where }),
   ]);
 
-  const data = batches.map((batch) => ({
-    invitedCount: batch.alumni.filter((a) => a.inviteStatus === 'INVITED' || a.inviteStatus === 'REGISTERED').length,
-    id: batch.id,
-    label: batch.label,
-    csvFilename: batch.csvFilename,
-    totalCount: batch.totalCount,
-    sentCount: batch.sentCount,
-    failedCount: batch.failedCount,
-    dbStatus: batch.status,
-    inviteStatus: mapInviteStatus(batch.status),
-    alumniCount: batch._count.alumni,
-    createdAt: batch.createdAt,
-    completedAt: batch.completedAt,
-  }));
+  const data = batches.map((batch) => {
+    const campusName =
+      batch.alumni.find((a) => a.campus)?.campus?.name ?? null;
+
+    return {
+      invitedCount: batch.alumni.filter(
+        (a) => a.inviteStatus === 'INVITED' || a.inviteStatus === 'REGISTERED'
+      ).length,
+      id: batch.id,
+      label: batch.label,
+      csvFilename: batch.csvFilename,
+      totalCount: scopedCampusId ? batch._count.alumni : batch.totalCount,
+      sentCount: batch.sentCount,
+      failedCount: batch.failedCount,
+      dbStatus: batch.status,
+      inviteStatus: mapInviteStatus(batch.status),
+      alumniCount: batch._count.alumni,
+      campusName,
+      createdAt: batch.createdAt,
+      completedAt: batch.completedAt,
+    };
+  });
 
   return NextResponse.json({
     data,
@@ -83,6 +108,11 @@ export async function GET(req: NextRequest) {
       limit,
       total,
       pages: Math.ceil(total / limit),
+    },
+    scope: {
+      role: staff.role,
+      campusId: scopedCampusId,
+      campusName: staff.campus?.name ?? null,
     },
   });
 }

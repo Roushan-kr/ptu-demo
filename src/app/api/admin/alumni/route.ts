@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
+import {
+  getAuthenticatedStaff,
+  resolveCampusScope,
+  alumniCampusWhere,
+  CampusScopeError,
+} from '@/lib/auth/staff-auth';
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('accessToken')?.value;
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  try { verifyAccessToken(token); } catch { return NextResponse.json({ error: 'Invalid token' }, { status: 401 }); }
+  const staff = await getAuthenticatedStaff();
+  if (!staff) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { searchParams } = new URL(req.url);
   const batchYear = searchParams.get('batchYear');
@@ -19,12 +23,24 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '20');
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  let scopedCampusId: string | null;
+  try {
+    scopedCampusId = resolveCampusScope(staff, searchParams.get('campusId'));
+  } catch (err) {
+    if (err instanceof CampusScopeError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
+  const where: Record<string, unknown> = {
+    ...alumniCampusWhere(scopedCampusId),
+  };
   if (batchYear) where.batchYear = parseInt(batchYear);
   if (branch) where.branch = { contains: branch, mode: 'insensitive' };
   if (college) where.college = { contains: college, mode: 'insensitive' };
   if (course) where.course = { contains: course, mode: 'insensitive' };
-  if (status) where.inviteStatus = status as any;
+  if (status) where.inviteStatus = status;
 
   const [alumni, total] = await Promise.all([
     prisma.alumni.findMany({
@@ -47,10 +63,12 @@ export async function GET(req: NextRequest) {
         isRegistered: true,
         registeredAt: true,
         createdAt: true,
+        campusId: true,
+        campus: { select: { id: true, name: true } },
         batch: {
-          select: { label: true }
+          select: { label: true },
         },
-      }
+      },
     }),
     prisma.alumni.count({ where }),
   ]);

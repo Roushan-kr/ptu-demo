@@ -194,7 +194,7 @@ export const alumniAuthConfig: NextAuthOptions = {
       return session;
     },
   },
-  pages: { signIn: '/alumni/register' },
+  pages: { signIn: '/alumni/login' },
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
 };

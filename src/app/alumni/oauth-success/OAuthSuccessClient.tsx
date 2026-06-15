@@ -40,7 +40,7 @@ export default function OAuthSuccessPage() {
         .catch(() => {
           const resolvedToken = token || getCookieValue('invite_token');
           const failUrl = resolvedToken
-            ? `/alumni/register?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
+            ? `/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
             : '/alumni/login?error=oauth_failed';
           router.replace(failUrl);
         });
@@ -51,7 +51,7 @@ export default function OAuthSuccessPage() {
       ran.current = true;
       const resolvedToken = token || getCookieValue('invite_token');
       const failUrl = resolvedToken
-        ? `/alumni/register?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
+        ? `/alumni/login?token=${encodeURIComponent(resolvedToken)}&error=oauth_failed`
         : '/alumni/login?error=oauth_failed';
       router.replace(failUrl);
     }

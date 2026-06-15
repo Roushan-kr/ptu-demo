@@ -11,8 +11,12 @@ interface RegistrationRequest {
   batchYear: number;
   branch: string;
   college: string;
+  course?: string | null;
   status: string;
   createdAt: string;
+  campus?: { id: string; name: string } | null;
+  currentRole?: string | null;
+  currentCompany?: string | null;
 }
 
 export default function AdminRequestsPage() {
@@ -129,6 +133,8 @@ export default function AdminRequestsPage() {
                   <tr>
                     <th className="p-4 font-semibold text-gray-700">Name / Email</th>
                     <th className="p-4 font-semibold text-gray-700">Academic Info</th>
+                    <th className="p-4 font-semibold text-gray-700">Professional Info</th>
+                    <th className="p-4 font-semibold text-gray-700">Campus</th>
                     <th className="p-4 font-semibold text-gray-700">Submitted</th>
                     <th className="p-4 font-semibold text-gray-700 text-right">Actions</th>
                   </tr>
@@ -143,7 +149,21 @@ export default function AdminRequestsPage() {
                       <td className="p-4 text-sm">
                         <div className="font-medium text-gray-800">{request.branch}</div>
                         <div className="text-gray-500">Batch Year: {request.batchYear}</div>
+                        {request.course && <div className="text-gray-500">{request.course}</div>}
                         <div className="text-xs text-gray-400 font-mono mt-0.5">Roll No: {request.enrollmentNo || 'N/A'}</div>
+                      </td>
+                      <td className="p-4 text-sm">
+                        {request.currentRole || request.currentCompany ? (
+                          <>
+                            <div className="font-semibold text-gray-800">{request.currentRole || '—'}</div>
+                            <div className="text-xs text-gray-500">{request.currentCompany || '—'}</div>
+                          </>
+                        ) : (
+                          <span className="text-gray-400 text-xs italic">Not specified</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-sm text-gray-700">
+                        {request.campus?.name || '—'}
                       </td>
                       <td className="p-4 text-sm text-gray-500">
                         {new Date(request.createdAt).toLocaleDateString(undefined, {

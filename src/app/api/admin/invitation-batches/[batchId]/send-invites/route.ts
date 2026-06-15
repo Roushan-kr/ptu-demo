@@ -1,35 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/auth/jwt';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/brevo';
+import {
+  getAuthenticatedStaff,
+  resolveCampusScope,
+  assertBatchCampusAccess,
+  CampusScopeError,
+} from '@/lib/auth/staff-auth';
 
 function getInviteLink(token: string, origin: string): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || origin;
-  return `${appUrl}/alumni/register?token=${token}`;
+  return `${appUrl}/alumni/login?token=${token}`;
 }
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ batchId: string }> }
 ) {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get('accessToken')?.value;
-  if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  try {
-    verifyAccessToken(accessToken);
-  } catch {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  const staff = await getAuthenticatedStaff();
+  if (!staff) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { batchId } = await params;
+
+  let scopedCampusId: string | null;
+  try {
+    scopedCampusId = resolveCampusScope(staff, null);
+  } catch (err) {
+    if (err instanceof CampusScopeError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
+  const hasAccess = await assertBatchCampusAccess(batchId, scopedCampusId);
+  if (!hasAccess) {
+    return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+  }
+
   const batch = await prisma.invitationBatch.findUnique({
     where: { id: batchId },
     include: {
       alumni: {
         where: {
           inviteStatus: 'PENDING',
+          ...(scopedCampusId ? { campusId: scopedCampusId } : {}),
         },
       },
     },

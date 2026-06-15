@@ -34,10 +34,11 @@ export async function POST(req: NextRequest) {
     // Protects against unapproved self-registrations or pending CSV records
     if (!alumni.isRegistered) {
       return NextResponse.json(
-        { 
-          error: 'Your account is not fully activated yet. If you recently self-registered, your request is likely pending admin review. If you received an invitation email, please use the link provided to set up your account.' 
-        }, 
-        { status: 403 } // 403 Forbidden is ideal for unactivated profiles
+        {
+          error:
+            'Your account is not activated yet. If you submitted an open registration request, wait for admin approval then sign in with your email and password. If you received an invitation email, use the link in that email to set up your account.',
+        },
+        { status: 403 }
       );
     }
     // ───────────────────────────────────────────────────────────────────────

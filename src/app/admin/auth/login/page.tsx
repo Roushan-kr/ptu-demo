@@ -55,10 +55,10 @@ export default function LoginPage() {
           <div className="relative hidden bg-[#012140] p-8 text-white lg:block xl:p-10">
             <div className="absolute -right-14 top-1/2 h-56 w-56 -translate-y-1/2 rounded-full bg-[#d61c1c]/35 blur-3xl" />
             <div className="relative z-10">
-              <p className="text-sm uppercase tracking-[0.2em] text-white/80">Admin Portal</p>
+              <p className="text-sm uppercase tracking-[0.2em] text-white/80">Admin/Sub-Admin Portal</p>
               <h1 className="mt-4 text-3xl font-bold leading-tight">
                 Welcome Back
-                <span className="block text-[#ffd5d5]">PTU Staff Admin</span>
+                <span className="block text-[#ffd5d5]">PTU Staff !</span>
               </h1>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
                 Login securely with your verified admin credentials to access the alumni management dashboard.
@@ -84,7 +84,7 @@ export default function LoginPage() {
           <div className="p-6 sm:p-8 md:p-10">
             <div className="mb-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#012140]/70">Secure Access</p>
-              <h2 className="mt-2 text-2xl font-bold text-[#012140]">Admin Login</h2>
+              <h2 className="mt-2 text-2xl font-bold text-[#012140]">Admin/Sub-Admin Login</h2>
             </div>
 
             {error && (

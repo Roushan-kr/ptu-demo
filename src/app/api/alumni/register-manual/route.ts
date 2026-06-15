@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { token, email, name, password, currentRole, currentCompany, city } = body;
 
-    if (!token || !email || !name) {
-      return NextResponse.json({ error: 'Token, email and name are required' }, { status: 400 });
+    if (!token) {
+      return NextResponse.json({ error: 'Invitation token is required' }, { status: 400 });
     }
 
     if (!password || password.length < 6) {
@@ -29,14 +29,20 @@ export async function POST(req: NextRequest) {
       where: {
         inviteToken: token,
         inviteStatus: { in: ['PENDING', 'INVITED'] },
+        isRegistered: false,
       },
     });
 
     if (!alumni) {
-      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid or expired invitation link' }, { status: 400 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = (email || alumni.email).toLowerCase().trim();
+    const finalName = (name || alumni.name).trim();
+
+    if (!finalName) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
 
     const existing = await prisma.alumni.findUnique({
       where: { email: normalizedEmail },
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const updateData: Record<string, unknown> = {
-      name: name.trim(),
+      name: finalName,
       email: normalizedEmail,
       currentRole: currentRole?.trim() || null,
       currentCompany: currentCompany?.trim() || null,

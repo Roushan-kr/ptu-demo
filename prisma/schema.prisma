@@ -14,6 +14,7 @@ datasource db {
 
 enum StaffRole {
   ADMIN
+  SUB_ADMIN
   COORDINATOR
 }
 
@@ -52,9 +53,30 @@ enum EmailStatus {
   BOUNCED
 }
 
+// Alumni Open Login
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─────────────────────────────────────────
 // MODELS
 // ─────────────────────────────────────────
+model Campus {
+  id        String   @id @default(cuid())
+  name      String   @unique   // e.g., "Main Campus Jalandhar", "Mohali Campus"
+  code      String   @unique   // e.g., "main", "mohali", "amritsar", "hoshiarpur", "batala"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff   Staff[]
+  alumni  Alumni[]
+
+  registrationRequests RegistrationRequest[]
+
+  @@map("campuses")
+}
 
 model Staff {
   id           String    @id @default(cuid())
@@ -71,6 +93,18 @@ model Staff {
 
   // Refresh tokens for JWT rotation
   refreshTokens String[] // Prisma scalar list
+
+  // Campus assignment – only for SUB_ADMIN (ADMIN has null)
+  campusId     String?
+  campus       Campus?   @relation(fields: [campusId], references: [id])
+
+  // Module permissions (JSON array of strings, e.g., ["dashboard","alumni","import","events","jobs"])
+  modules      Json?     @default("[]")
+
+  // Who created this staff (admin user id)
+  createdById  String?
+  createdBy    Staff?    @relation("StaffCreator", fields: [createdById], references: [id])
+  createdStaff Staff[]   @relation("StaffCreator")
 
   // Relations
   batches          InvitationBatch[]
@@ -132,6 +166,10 @@ model Alumni {
   avatarUrl      String?
   bio            String?
 
+  // Campus assignment – each alumni belongs to one campus
+  campusId     String?
+  campus       Campus?   @relation(fields: [campusId], references: [id])
+
   // Tracking
   importedById String?
   importedBy   Staff?           @relation(fields: [importedById], references: [id])
@@ -153,6 +191,7 @@ model Alumni {
   @@index([inviteStatus])
   @@index([inviteToken])
   @@index([originalInvitedEmail])
+  @@index([campusId])
   @@map("alumni")
 }
 
@@ -208,13 +247,6 @@ model EmailLog {
   @@map("email_logs")
 }
 
-// 1. Add a new Enum for Request Statuses
-enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 // 2. Add the Registration Request Staging Model
 model RegistrationRequest {
   id           String  @id @default(cuid())
@@ -226,6 +258,12 @@ model RegistrationRequest {
   college      String
   course       String?
   phone        String?
+  campusId     String?
+  campus       Campus?   @relation(fields: [campusId], references: [id])
+
+  // Professional Details
+  currentRole    String?
+  currentCompany String?
 
   // Registration Type Tracking
   authProvider String // "GOOGLE", "LINKEDIN", or "MANUAL"
