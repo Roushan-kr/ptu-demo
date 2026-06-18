@@ -21,7 +21,7 @@ async function completeOAuthInviteRegistration(
     return false;
   }
 
-  let updateData: Record<string, unknown> = {
+  const updateData: Record<string, unknown> = {
     inviteStatus: 'REGISTERED',
     isRegistered: true,
     registeredAt: new Date(),
@@ -55,7 +55,7 @@ async function completeOAuthInviteRegistration(
 
   await prisma.alumni.update({
     where: { id: alumni.id },
-    data: updateData as any,
+    data: updateData ,
   });
 
   return true;

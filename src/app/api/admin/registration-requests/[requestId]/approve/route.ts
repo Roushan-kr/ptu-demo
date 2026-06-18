@@ -56,9 +56,15 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid campus' }, { status: 400 });
     }
 
-    const duplicateAlumni = await prisma.alumni.findUnique({
-      where: { email: existingRequest.email },
+    const duplicateAlumni = await prisma.alumni.findFirst({
+      where: {
+        OR: [
+          { email: existingRequest.email },
+          { originalInvitedEmail: existingRequest.email },
+        ],
+      },
     });
+    
     if (duplicateAlumni) {
       return NextResponse.json(
         { error: 'An alumni account with this email already exists' },
