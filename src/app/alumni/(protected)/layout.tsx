@@ -24,7 +24,7 @@ export default async function ProtectedAlumniLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-24 antialiased selection:bg-[#C41E3A]/10">
+    <div className="min-h-screen bg-slate-50/60 pb-28 antialiased selection:bg-[#C41E3A]/10">
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">

@@ -60,6 +60,23 @@ enum RequestStatus {
   REJECTED
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum JobCategory {
+  VACANCY
+  ACTIVE_DRIVE
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 // ─────────────────────────────────────────
 // MODELS
 // ─────────────────────────────────────────
@@ -111,6 +128,7 @@ model Staff {
   events           Event[]
   importedAlumni   Alumni[]
   reviewedRequests RegistrationRequest[]
+  jobs             Job[]
 
   @@map("staff")
 }
@@ -166,6 +184,13 @@ model Alumni {
   avatarUrl      String?
   bio            String?
 
+  // Extra profile fields
+  isActive       Boolean      @default(true)
+  dob            DateTime?
+  gender         Gender?
+  addressLine    String?
+  pincode        String?
+
   // Campus assignment – each alumni belongs to one campus
   campusId     String?
   campus       Campus?   @relation(fields: [campusId], references: [id])
@@ -181,8 +206,18 @@ model Alumni {
   createdAt    DateTime         @default(now())
 
   // Relations
-  rsvps     Rsvp[]
-  emailLogs EmailLog[]
+  rsvps               Rsvp[]
+  emailLogs           EmailLog[]
+  education           Education[]
+  workExperience      WorkExperience[]
+  posts               Post[]
+  likes               Like[]
+  comments            Comment[]
+  startups            StartUp[]
+  albums              Album[]
+  jobs                Job[]
+  sentConnections     Connection[]     @relation("SentConnections")
+  receivedConnections Connection[]     @relation("ReceivedConnections")
 
   @@index([batchYear])
   @@index([branch])
@@ -192,6 +227,13 @@ model Alumni {
   @@index([inviteToken])
   @@index([originalInvitedEmail])
   @@index([campusId])
+  @@index([isActive])
+  @@index([city])
+  @@index([pincode])
+  @@index([name])
+  @@index([currentCompany])
+  @@index([currentRole])
+  @@index([gender])
   @@map("alumni")
 }
 
@@ -199,6 +241,7 @@ model Event {
   id            String    @id @default(cuid())
   title         String
   description   String
+  category      String    @default("General")
   eventDate     DateTime
   venue         String
   coverImageUrl String?
@@ -211,6 +254,8 @@ model Event {
   rsvps     Rsvp[]
   emailLogs EmailLog[]
 
+  @@index([category])
+  @@index([eventDate])
   @@map("events")
 }
 
@@ -265,6 +310,13 @@ model RegistrationRequest {
   currentRole    String?
   currentCompany String?
 
+  // Extra Details for staging
+  dob             DateTime?
+  gender          Gender?
+  addressLine     String?
+  pincode         String?
+  city            String?
+
   // Registration Type Tracking
   authProvider String // "GOOGLE", "LINKEDIN", or "MANUAL"
   providerId   String? // Stores googleId or linkedinId if applicable
@@ -284,4 +336,173 @@ model RegistrationRequest {
 
   @@index([status])
   @@map("registration_requests")
+}
+
+// ─────────────────────────────────────────
+// NEW MODELS FOR ALUMNI FEATURES
+// ─────────────────────────────────────────
+
+model Education {
+  id           String    @id @default(cuid())
+  alumniId     String
+  alumni       Alumni    @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  school       String
+  degree       String
+  fieldOfStudy String?
+  startDate    DateTime
+  endDate      DateTime?
+  isCurrent    Boolean   @default(false)
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([alumniId])
+  @@map("education")
+}
+
+model WorkExperience {
+  id          String    @id @default(cuid())
+  alumniId    String
+  alumni      Alumni    @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  company     String
+  title       String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean   @default(false)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([alumniId])
+  @@map("work_experiences")
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  content   String?
+  images    String[]
+  authorId  String
+  author    Alumni    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  likes    Like[]
+  comments Comment[]
+
+  @@index([authorId])
+  @@map("posts")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  alumniId  String
+  alumni    Alumni   @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, alumniId])
+  @@index([postId])
+  @@index([alumniId])
+  @@map("likes")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  alumniId  String
+  alumni    Alumni   @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId])
+  @@index([alumniId])
+  @@map("comments")
+}
+
+model StartUp {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  websiteUrl  String?
+  logoUrl     String?
+  industry    String?
+  foundedYear Int?
+  founderId   String
+  founder     Alumni   @relation(fields: [founderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([founderId])
+  @@map("startups")
+}
+
+model Album {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  alumniId    String
+  alumni      Alumni       @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  images      AlbumImage[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([alumniId])
+  @@map("albums")
+}
+
+model AlbumImage {
+  id        String   @id @default(cuid())
+  albumId   String
+  album     Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  imageUrl  String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  @@index([albumId])
+  @@map("album_images")
+}
+
+model Job {
+  id              String      @id @default(cuid())
+  title           String
+  description     String
+  company         String
+  location        String?
+  category        JobCategory @default(VACANCY)
+  salaryRange     String?
+  applyUrl        String?
+  isActive        Boolean     @default(true)
+  postedByStaffId String?
+  postedByStaff   Staff?      @relation(fields: [postedByStaffId], references: [id])
+  postedByAlumniId String?
+  postedByAlumni  Alumni?     @relation(fields: [postedByAlumniId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([postedByStaffId])
+  @@index([postedByAlumniId])
+  @@index([category])
+  @@index([isActive])
+  @@map("jobs")
+}
+
+model Connection {
+  id         String           @id @default(cuid())
+  senderId   String
+  sender     Alumni           @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   Alumni           @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     ConnectionStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("connections")
 }
