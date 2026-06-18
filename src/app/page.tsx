@@ -18,7 +18,7 @@ export default async function HomePage() {
   }
 
   if (isAuthenticated) {
-    redirect('/alumni/dashboard');
+    redirect('/alumni/feed');
   }
 
   return (

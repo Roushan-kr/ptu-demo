@@ -1,4 +1,4 @@
-// src/app/alumni/(protected)/dashboard/page.tsx
+// src/app/alumni/(protected)/noticeboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -36,7 +36,7 @@ const alumniHighlights = [
   { id: 3, name: 'Amit Patel', batch: '2016', role: 'VP Engineering at MNC', achievement: 'Patent holder in Cloud Technologies' },
 ];
 
-export default function AlumniDashboard() {
+export default function AlumniNoticeboard() {
   const [profile, setProfile] = useState<AlumniProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -61,7 +61,7 @@ export default function AlumniDashboard() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#003D7A] border-t-[#C41E3A] rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-600">Loading your profile...</p>
+          <p className="text-gray-600">Loading noticeboard...</p>
         </div>
       </div>
     );
@@ -73,7 +73,7 @@ export default function AlumniDashboard() {
       <div className="bg-gradient-to-r from-[#C41E3A] to-[#003D7A] text-white rounded-2xl p-8 shadow-lg">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Welcome back, {profile?.name?.split(' ')[0]}! 👋</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Noticeboard 👋</h1>
             <p className="text-red-100 text-lg">{profile?.branch} • Class of {profile?.batchYear}</p>
             {profile?.currentCompany && <p className="text-red-100 mt-1">📍 {profile.currentCompany}, {profile.city}</p>}
           </div>

@@ -99,7 +99,7 @@ export default function AlumniLoginPage() {
           setLoading(false);
           return;
         }
-        router.push('/alumni/dashboard');
+        router.push('/alumni/feed');
         return;
       }
 
@@ -120,7 +120,7 @@ export default function AlumniLoginPage() {
         return;
       }
 
-      router.push('/alumni/dashboard');
+      router.push('/alumni/feed');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
