@@ -35,7 +35,7 @@ export default function OAuthSuccessPage() {
           } catch {
             /* ignore */
           }
-          router.replace('/alumni/dashboard');
+          router.replace('/alumni/feed');
         })
         .catch(() => {
           const resolvedToken = token || getCookieValue('invite_token');

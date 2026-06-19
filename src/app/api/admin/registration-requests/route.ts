@@ -11,7 +11,7 @@ export async function GET() {
 
     let scopedCampusId: string | null;
     try {
-      scopedCampusId = resolveCampusScope(staff, null);
+      scopedCampusId = resolveCampusScope(staff, staff.campusId);
     } catch (err) {
       if (err instanceof CampusScopeError) {
         return NextResponse.json({ error: err.message }, { status: 403 });

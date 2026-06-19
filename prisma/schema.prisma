@@ -192,8 +192,8 @@ model Alumni {
   pincode        String?
 
   // Campus assignment – each alumni belongs to one campus
-  campusId     String?
-  campus       Campus?   @relation(fields: [campusId], references: [id])
+  campusId     String // alumni must belong to a campus (foreign key)
+  campus       Campus   @relation(fields: [campusId], references: [id])
 
   // Tracking
   importedById String?
@@ -298,6 +298,7 @@ model RegistrationRequest {
   name         String
   email        String  @unique // Prevents duplicate concurrent requests
   enrollmentNo String?
+  idProffUrl    String? // college verification document url (e.g., student ID card)
   batchYear    Int
   branch       String
   college      String
@@ -447,6 +448,7 @@ model Album {
   alumniId    String
   alumni      Alumni       @relation(fields: [alumniId], references: [id], onDelete: Cascade)
   images      AlbumImage[]
+  isPublished  Boolean      @default(false) // admin let it be published or not (public property scope to campus)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

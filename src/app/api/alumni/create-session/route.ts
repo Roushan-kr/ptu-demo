@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const alumni = await prisma.alumni.findUnique({ where: { id: alumniId } });
     if (!alumni) return NextResponse.json({ error: 'Alumni not found' }, { status: 404 });
 
-    const accessToken = generateAlumniAccessToken({ id: alumni.id, email: alumni.email, name: alumni.name });
+    const accessToken = generateAlumniAccessToken({ id: alumni.id, email: alumni.email, name: alumni.name, campusId: alumni.campusId});
     const refreshToken = generateAlumniRefreshToken({ id: alumni.id });
 
     await prisma.alumni.update({

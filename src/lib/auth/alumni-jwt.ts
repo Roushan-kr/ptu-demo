@@ -4,6 +4,7 @@ export interface AlumniTokenPayload {
   id: string;
   email: string;
   name?: string;
+  campusId?: string;
 }
 
 export function generateAlumniAccessToken(payload: AlumniTokenPayload): string {
