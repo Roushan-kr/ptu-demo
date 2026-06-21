@@ -10,8 +10,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const payload = verifyAlumniAccessToken(token);
+    const { searchParams } = new URL(req.url);
+    const targetId = searchParams.get('id') || payload.id;
+    const isSelf = targetId === payload.id;
+
     const alumni = await prisma.alumni.findUnique({
-      where: { id: payload.id },
+      where: { id: targetId },
       select: {
         id: true,
         name: true,
@@ -27,7 +31,7 @@ export async function GET(req: NextRequest) {
       },
     });
     if (!alumni) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    return NextResponse.json({ user: alumni });
+    return NextResponse.json({ user: alumni, isSelf });
   } catch {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }

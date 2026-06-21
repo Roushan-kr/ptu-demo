@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Edit3, Save, X, Mail, Briefcase, MapPin } from 'lucide-react';
 
 interface AlumniProfile {
@@ -16,25 +16,30 @@ interface AlumniProfile {
   avatarUrl?: string;
 }
 
-export default function ProfilePage() {
+function ProfilePageClient() {
   const [profile, setProfile] = useState<AlumniProfile | null>(null);
   const [editingMode, setEditingMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<AlumniProfile | null>(null);
+  const [isSelf, setIsSelf] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [id]);
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch('/api/alumni/me');
+      const url = id ? `/api/alumni/me?id=${id}` : '/api/alumni/me';
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Unauthorized');
       const data = await res.json();
       setProfile(data.user);
       setFormData(data.user);
+      setIsSelf(data.isSelf ?? !id);
     } catch {
       router.push('/alumni/login');
     } finally {
@@ -93,16 +98,24 @@ export default function ProfilePage() {
       <div className="bg-gradient-to-r from-[#C41E3A] to-[#003D7A] text-white rounded-2xl p-8 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Your Profile</h1>
-            <p className="text-red-100">Manage your alumni network presence</p>
+            <h1 className="text-4xl font-bold mb-2">
+              {isSelf ? 'Your Profile' : `${profile?.name}'s Profile`}
+            </h1>
+            <p className="text-red-100">
+              {isSelf 
+                ? 'Manage your alumni network presence' 
+                : 'Connect and collaborate with campus graduates'}
+            </p>
           </div>
-          <button
-            onClick={() => setEditingMode(!editingMode)}
-            className="flex items-center gap-2 px-6 py-3 bg-white text-[#C41E3A] rounded-lg hover:bg-gray-100 transition font-semibold"
-          >
-            {editingMode ? <X size={20} /> : <Edit3 size={20} />}
-            {editingMode ? 'Cancel' : 'Edit Profile'}
-          </button>
+          {isSelf && (
+            <button
+              onClick={() => setEditingMode(!editingMode)}
+              className="flex items-center gap-2 px-6 py-3 bg-white text-[#C41E3A] rounded-lg hover:bg-gray-100 transition font-semibold"
+            >
+              {editingMode ? <X size={20} /> : <Edit3 size={20} />}
+              {editingMode ? 'Cancel' : 'Edit Profile'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -279,26 +292,43 @@ export default function ProfilePage() {
       </div>
 
       {/* Additional Options */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-3">Privacy Settings</h3>
-          <p className="text-gray-600 mb-4">Control who can see your profile and contact information</p>
-          <button className="w-full py-2 border-2 border-[#003D7A] text-[#003D7A] rounded-lg hover:bg-[#003D7A] hover:text-white transition font-semibold">
-            Manage Privacy
-          </button>
-        </div>
+      {isSelf && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Privacy Settings</h3>
+            <p className="text-gray-600 mb-4">Control who can see your profile and contact information</p>
+            <button className="w-full py-2 border-2 border-[#003D7A] text-[#003D7A] rounded-lg hover:bg-[#003D7A] hover:text-white transition font-semibold">
+              Manage Privacy
+            </button>
+          </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-3">Account Settings</h3>
-          <p className="text-gray-600 mb-4">Change your password and other account preferences</p>
-          <button className="w-full py-2 border-2 border-[#003D7A] text-[#003D7A] rounded-lg hover:bg-[#003D7A] hover:text-white transition font-semibold">
-            Account Settings
-          </button>
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Account Settings</h3>
+            <p className="text-gray-600 mb-4">Change your password and other account preferences</p>
+            <button className="w-full py-2 border-2 border-[#003D7A] text-[#003D7A] rounded-lg hover:bg-[#003D7A] hover:text-white transition font-semibold">
+              Account Settings
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Spacer for bottom nav */}
       <div className="h-20"></div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#003D7A] border-t-[#C41E3A] rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    }>
+      <ProfilePageClient />
+    </Suspense>
   );
 }

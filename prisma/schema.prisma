@@ -484,6 +484,8 @@ model Job {
   postedByAlumni  Alumni?     @relation(fields: [postedByAlumniId], references: [id], onDelete: Cascade)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  expireAt        DateTime?   // job Expiry Date
+  metadata        Json?       @default("{}")
 
   @@index([postedByStaffId])
   @@index([postedByAlumniId])
