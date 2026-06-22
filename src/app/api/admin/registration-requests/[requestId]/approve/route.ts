@@ -13,6 +13,11 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== StaffRole.ADMIN && !modules.includes('requests')) {
+      return NextResponse.json({ error: 'Forbidden: Access denied to registration requests' }, { status: 403 });
+    }
+
     const { requestId } = await params;
     const body = await req.json().catch(() => ({}));
     const overrideCampusId = typeof body.campusId === 'string' ? body.campusId.trim() : '';
@@ -40,6 +45,9 @@ export async function POST(
     } else {
       if (!staff.campusId) {
         return NextResponse.json({ error: 'Your account is not linked to any campus' }, { status: 403 });
+      }
+      if (existingRequest.campusId && existingRequest.campusId !== staff.campusId) {
+        return NextResponse.json({ error: 'Forbidden: You can only approve requests for your assigned campus' }, { status: 403 });
       }
       finalCampusId = staff.campusId;
     }
@@ -105,6 +113,19 @@ export async function POST(
           currentCompany: existingRequest.currentCompany,
         },
       });
+
+      if (existingRequest.currentRole || existingRequest.currentCompany) {
+        await tx.workExperience.create({
+          data: {
+            alumniId: newAlumni.id,
+            company: existingRequest.currentCompany || 'Not Specified',
+            title: existingRequest.currentRole || 'Not Specified',
+            location: existingRequest.city || null,
+            startDate: new Date(),
+            isCurrent: true,
+          },
+        });
+      }
 
       return { updatedRequest, newAlumni };
     });

@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
       include: { campus: true }, // get campus relation for sub-admin
     });
     if (!staff) throw new Error('Staff not found');
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('import')) {
+      return NextResponse.json({ error: 'Forbidden: Access denied to import module' }, { status: 403 });
+    }
   } catch {
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
   }

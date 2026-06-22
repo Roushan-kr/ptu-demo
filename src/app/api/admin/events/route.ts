@@ -34,7 +34,30 @@ export async function GET(req: NextRequest) {
   if (auth.error) return auth.error;
 
   try {
+    const staff = auth.staff!;
+    const where: Record<string, any> = {};
+    if (staff.role !== 'ADMIN' && staff.campusId) {
+      where.OR = [
+        {
+          postedByStaff: {
+            campusId: staff.campusId,
+          },
+        },
+        {
+          postedByStaff: {
+            campusId: null,
+          },
+        },
+        {
+          postedByAlumni: {
+            campusId: staff.campusId,
+          },
+        },
+      ];
+    }
+
     const events = await prisma.event.findMany({
+      where,
       orderBy: { eventDate: 'desc' },
       include: {
         _count: {

@@ -1,24 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAccessToken } from '@/lib/auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { getAuthenticatedStaff } from '@/lib/auth/staff-auth'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
-    const accessToken = req.cookies.get('accessToken')?.value
-    if (!accessToken) {
+    const staff = await getAuthenticatedStaff()
+    if (!staff) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const payload = verifyAccessToken(accessToken)
-    const reviewedById = payload.id
-
-    const staff = await prisma.staff.findUnique({ where: { id: reviewedById } })
-    if (!staff) {
-      return NextResponse.json({ error: 'Authenticated staff user not found' }, { status: 401 })
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : []
+    if (staff.role !== 'ADMIN' && !modules.includes('requests')) {
+      return NextResponse.json({ error: 'Forbidden: Access denied to registration requests' }, { status: 403 })
     }
+
+    const reviewedById = staff.id
 
     const { rejectionReason } = await req.json() ?? ""
     const { requestId } = await params
@@ -29,6 +28,15 @@ export async function POST(
 
     if (!existingRequest) {
       return NextResponse.json({ error: 'Registration request not found' }, { status: 404 })
+    }
+
+    if (staff.role !== 'ADMIN') {
+      if (!staff.campusId) {
+        return NextResponse.json({ error: 'Your account is not linked to any campus' }, { status: 403 })
+      }
+      if (existingRequest.campusId && existingRequest.campusId !== staff.campusId) {
+        return NextResponse.json({ error: 'Forbidden: You can only reject requests for your assigned campus' }, { status: 403 })
+      }
     }
 
     if (existingRequest.status !== 'PENDING') {

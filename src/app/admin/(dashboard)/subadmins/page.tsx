@@ -26,6 +26,7 @@ const availableModules = [
   { name: 'Dashboard', value: 'dashboard' },
   { name: 'Import Alumni', value: 'import' },
   { name: 'Alumni Management', value: 'alumni' },
+  { name: 'Opportunities', value: 'jobs' },
   { name: 'Events', value: 'events' },
   { name: 'Registration Requests', value: 'requests' },
 ];

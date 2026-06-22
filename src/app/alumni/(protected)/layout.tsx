@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
+import { verifyAccessToken } from '@/lib/auth/jwt';
 import AlumniBottomNav from '@/components/AlumniBottomNav';
 
 export default async function ProtectedAlumniLayout({
@@ -11,15 +12,29 @@ export default async function ProtectedAlumniLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const token = cookieStore.get('alumniAccessToken')?.value;
+  const alumniToken = cookieStore.get('alumniAccessToken')?.value;
+  const staffToken = cookieStore.get('accessToken')?.value;
 
-  if (!token) {
+  if (!alumniToken && !staffToken) {
     redirect('/alumni/login');
   }
 
-  try {
-    verifyAlumniAccessToken(token);
-  } catch {
+  let authorized = false;
+  if (alumniToken) {
+    try {
+      verifyAlumniAccessToken(alumniToken);
+      authorized = true;
+    } catch {}
+  }
+
+  if (!authorized && staffToken) {
+    try {
+      verifyAccessToken(staffToken);
+      authorized = true;
+    } catch {}
+  }
+
+  if (!authorized) {
     redirect('/alumni/login');
   }
 

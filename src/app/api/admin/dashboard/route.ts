@@ -13,6 +13,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('dashboard')) {
+      return NextResponse.json({ error: 'Forbidden: Access denied to dashboard module' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     let scopedCampusId: string | null;
     try {
@@ -30,10 +35,26 @@ export async function GET(req: NextRequest) {
       where.campusId = scopedCampusId;
     }
 
-    // Events filter: Filter events created by staff members who belong to this campus (if scoped)
+    // Events filter: Filter events created by staff members or alumni of this campus, or global admin
     const eventWhere: Record<string, any> = {};
     if (scopedCampusId) {
-      eventWhere.createdBy = { campusId: scopedCampusId };
+      eventWhere.OR = [
+        {
+          postedByStaff: {
+            campusId: scopedCampusId,
+          },
+        },
+        {
+          postedByStaff: {
+            campusId: null,
+          },
+        },
+        {
+          postedByAlumni: {
+            campusId: scopedCampusId,
+          },
+        },
+      ];
     }
 
     // Perform concurrent count queries

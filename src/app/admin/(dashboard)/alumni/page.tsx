@@ -31,6 +31,7 @@ interface AlumniData {
   googleId?: string | null;
   linkedinId?: string | null;
   campus?: { id: string; name: string } | null;
+  avatarUrl?: string | null;
 }
 
 interface PaginationData {
@@ -360,6 +361,7 @@ export default function AlumniPage() {
             <thead className="bg-[#012140]/5 border-b border-[#012140]/10">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-[#012140]">#</th>
+                <th className="px-4 py-3 text-left font-semibold text-[#012140]">Photo</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#012140]">Name</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#012140]">Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-[#012140]">Batch</th>
@@ -391,6 +393,15 @@ export default function AlumniPage() {
                 alumni.map((alum, index) => (
                   <tr key={alum.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
                     <td className="px-4 py-3 text-gray-500">{(pagination.page - 1) * pagination.limit + index + 1}</td>
+                    <td className="px-4 py-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#012140] to-[#C41E3A] text-white flex items-center justify-center font-bold text-[11px] shadow-sm overflow-hidden flex-shrink-0">
+                        {alum.avatarUrl ? (
+                          <img src={alum.avatarUrl} alt={alum.name} className="w-full h-full object-cover" />
+                        ) : (
+                          alum.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 font-medium text-gray-900">{alum.name}</td>
                     <td className="px-4 py-3 text-gray-600 truncate max-w-[200px]">{alum.email}</td>
                     <td className="px-4 py-3 text-gray-600">{alum.batchYear}</td>
@@ -422,35 +433,97 @@ export default function AlumniPage() {
 
           {/* Alumni Detail Modal */}
           {showModal && selectedAlumni && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-              <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-[#012140]">Alumni Details</h2>
-                  <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg text-[#012140]">
-                    <X size={24} />
-                  </button>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="text-xs text-gray-500">Full Name</label><p className="font-medium text-[#012140]">{selectedAlumni.name}</p></div>
-                    <div><label className="text-xs text-gray-500">Email</label><p className="text-[#012140]">{selectedAlumni.email}</p></div>
-                    <div><label className="text-xs text-gray-500">Original Invited Email</label><p className="text-[#012140]">{selectedAlumni.originalInvitedEmail || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Enrollment No.</label><p className="text-[#012140]">{selectedAlumni.enrollmentNo || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Batch Year</label><p className="text-[#012140]">{selectedAlumni.batchYear}</p></div>
-                    <div><label className="text-xs text-gray-500">Branch</label><p className="text-[#012140]">{selectedAlumni.branch}</p></div>
-                    <div><label className="text-xs text-gray-500">Course</label><p className="text-[#012140]">{selectedAlumni.course || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">College</label><p className="text-[#012140]">{selectedAlumni.college}</p></div>
-                    <div><label className="text-xs text-gray-500">Campus</label><p className="text-[#012140]">{selectedAlumni.campus?.name || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Phone</label><p className="text-[#012140]">{selectedAlumni.phone || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Status</label><div className="text-[#012140]">{getStatusBadge(selectedAlumni.displayStatus)}</div></div>
-                    <div><label className="text-xs text-gray-500">Current Role</label><p className="text-[#012140]">{selectedAlumni.currentRole || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Current Company</label><p className="text-[#012140]">{selectedAlumni.currentCompany || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">City</label><p className="text-[#012140]">{selectedAlumni.city || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Invited At</label><p className="text-[#012140]">{selectedAlumni.invitedAt ? new Date(selectedAlumni.invitedAt).toLocaleString() : '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Registered At</label><p className="text-[#012140]">{selectedAlumni.registeredAt ? new Date(selectedAlumni.registeredAt).toLocaleString() : '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">Google ID</label><p className="text-[#012140]">{selectedAlumni.googleId || '-'}</p></div>
-                    <div><label className="text-xs text-gray-500">LinkedIn ID</label><p className="text-[#012140]">{selectedAlumni.linkedinId || '-'}</p></div>
+            <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+              <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl transition-all" onClick={(e) => e.stopPropagation()}>
+                {/* Modal Banner */}
+                <div className="h-28 bg-gradient-to-r from-[#012140] via-[#1a4ea3] to-[#C41E3A] relative" />
+                
+                {/* Modal Header */}
+                <div className="px-6 pb-6 relative flex flex-col items-center -mt-14 border-b border-slate-100">
+                  <div className="w-28 h-28 rounded-full border-4 border-white bg-gradient-to-tr from-[#012140] to-[#C41E3A] text-white flex items-center justify-center font-bold text-3xl shadow-md overflow-hidden mb-3">
+                    {selectedAlumni.avatarUrl ? (
+                      <img src={selectedAlumni.avatarUrl} alt={selectedAlumni.name} className="w-full h-full object-cover" />
+                    ) : (
+                      selectedAlumni.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+                    )}
                   </div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 flex items-center gap-1.5">
+                    {selectedAlumni.name}
+                  </h2>
+                  <p className="text-sm font-semibold text-[#012140] mt-1 text-center">
+                    {selectedAlumni.currentRole || 'Alumni'} {selectedAlumni.currentCompany ? `at ${selectedAlumni.currentCompany}` : ''}
+                  </p>
+                  <p className="text-xs font-medium text-slate-400 mt-1 flex items-center gap-1">
+                    <MapPin size={12} /> {selectedAlumni.city || 'Location not specified'}
+                  </p>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-6 max-h-[50vh] overflow-y-auto space-y-6">
+                  {/* Grid details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm text-black">
+                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Email Address</label>
+                      <p className="font-semibold text-slate-800 break-all">{selectedAlumni.email}</p>
+                    </div>
+
+                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Phone Number</label>
+                      <p className="font-semibold text-slate-800">{selectedAlumni.phone || '-'}</p>
+                    </div>
+
+                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Academic details</label>
+                      <p className="font-semibold text-slate-800">{selectedAlumni.course || 'Degree'} in {selectedAlumni.branch}</p>
+                      <p className="text-xs font-medium text-slate-500 mt-0.5">Class of {selectedAlumni.batchYear} • {selectedAlumni.college}</p>
+                    </div>
+
+                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Campus Association</label>
+                      <p className="font-semibold text-[#012140]">{selectedAlumni.campus?.name || '-'}</p>
+                    </div>
+
+                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Enrollment Number</label>
+                      <p className="font-semibold text-slate-800">{selectedAlumni.enrollmentNo || '-'}</p>
+                    </div>
+
+                    <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Account Status</label>
+                      <div className="mt-0.5">{getStatusBadge(selectedAlumni.displayStatus)}</div>
+                    </div>
+                  </div>
+
+                  {/* Metadata Audit */}
+                  <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4 text-xs font-semibold text-slate-400">
+                    <div>
+                      <p>Invited: {selectedAlumni.invitedAt ? new Date(selectedAlumni.invitedAt).toLocaleDateString() : '-'}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Original invitation email: {selectedAlumni.originalInvitedEmail || '-'}</p>
+                    </div>
+                    <div>
+                      <p>Registered: {selectedAlumni.registeredAt ? new Date(selectedAlumni.registeredAt).toLocaleDateString() : '-'}</p>
+                      {selectedAlumni.googleId && <p className="text-[10px] text-slate-400 font-medium">Connected Google OAuth</p>}
+                      {selectedAlumni.linkedinId && <p className="text-[10px] text-slate-400 font-medium">Connected LinkedIn OAuth</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-100">
+                  <a
+                    href={`/alumni/profile?id=${selectedAlumni.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 text-center py-2.5 bg-[#012140] hover:bg-[#012140]/90 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center"
+                  >
+                    View Detail Profile
+                  </a>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition shadow-sm"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>

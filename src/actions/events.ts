@@ -253,6 +253,11 @@ export async function getAdminEventsAction(params: EventFilterParams): Promise<{
   const staff = await getAuthenticatedStaff();
   if (!staff) throw new Error('Unauthorized');
 
+  const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+  if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+    throw new Error('Forbidden: Access denied to events module');
+  }
+
   const { tab = 'all', page = 1, limit = 10 } = params;
 
   const tabClause: Prisma.EventWhereInput | undefined =
@@ -260,6 +265,26 @@ export async function getAdminEventsAction(params: EventFilterParams): Promise<{
 
   const whereClause = buildEventWhere(params, tabClause);
   const skip = (page - 1) * limit;
+
+  let scopedCampusId: string | null = null;
+  if (staff.role !== 'ADMIN') {
+    scopedCampusId = staff.campusId;
+  }
+
+  if (scopedCampusId) {
+    const campusFilter = {
+      OR: [
+        { postedByStaff: { campusId: scopedCampusId } },
+        { postedByStaff: { campusId: null } },
+        { postedByAlumni: { campusId: scopedCampusId } }
+      ]
+    };
+    if (whereClause.AND) {
+      (whereClause.AND as any).push(campusFilter);
+    } else {
+      whereClause.AND = [campusFilter] as any;
+    }
+  }
 
   const [rawEvents, totalCount] = await Promise.all([
     prisma.event.findMany({
@@ -296,6 +321,11 @@ export async function createAdminEventAction(formData: EventSchemaType): Promise
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return { success: false, error: 'Forbidden: Access denied to events module' };
+    }
+
     const { error, data } = parseEventForm(formData);
     if (error) return { success: false, error };
 
@@ -314,6 +344,11 @@ export async function updateAdminEventAction(id: string, formData: EventSchemaTy
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return { success: false, error: 'Forbidden: Access denied to events module' };
+    }
+
     const { error, data } = parseEventForm(formData);
     if (error) return { success: false, error };
 
@@ -330,6 +365,11 @@ export async function toggleEventPublishAction(id: string, isPublished: boolean)
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return { success: false, error: 'Forbidden: Access denied to events module' };
+    }
+
     await prisma.event.update({ where: { id }, data: { isPublished } });
     return { success: true };
   } catch (err: any) {
@@ -342,6 +382,11 @@ export async function deleteEventAction(id: string): Promise<ActionResult> {
   try {
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return { success: false, error: 'Forbidden: Access denied to events module' };
+    }
 
     // Clear dependents first (FK constraints)
     await prisma.$transaction([
@@ -361,6 +406,11 @@ export async function getEventRsvpsAction(eventId: string): Promise<RsvpDetailsT
   try {
     const staff = await getAuthenticatedStaff();
     if (!staff) return null;
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('events')) {
+      return null;
+    }
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },

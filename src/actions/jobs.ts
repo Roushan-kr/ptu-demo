@@ -306,6 +306,11 @@ export async function getAdminJobsAction(params: JobFilterParams) {
   const staff = await getAuthenticatedStaff();
   if (!staff) throw new Error('Unauthorized');
 
+  const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+  if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+    throw new Error('Forbidden: Access denied to opportunities module');
+  }
+
   const { tab = 'all', page = 1, limit = 8 } = params;
   const skip = (page - 1) * limit;
 
@@ -313,6 +318,26 @@ export async function getAdminJobsAction(params: JobFilterParams) {
     tab === 'posted' ? { postedByStaffId: { not: null } } : undefined;
 
   const whereClause = buildWhereClause(params, tabClause);
+
+  let scopedCampusId: string | null = null;
+  if (staff.role !== 'ADMIN') {
+    scopedCampusId = staff.campusId;
+  }
+
+  if (scopedCampusId) {
+    const campusFilter = {
+      OR: [
+        { postedByStaff: { campusId: scopedCampusId } },
+        { postedByStaff: { campusId: null } },
+        { postedByAlumni: { campusId: scopedCampusId } }
+      ]
+    };
+    if (whereClause.AND) {
+      (whereClause.AND as any).push(campusFilter);
+    } else {
+      whereClause.AND = [campusFilter] as any;
+    }
+  }
 
   const [jobs, totalCount, distinctJobs] = await Promise.all([
     prisma.job.findMany({
@@ -327,7 +352,16 @@ export async function getAdminJobsAction(params: JobFilterParams) {
     }),
     prisma.job.count({ where: whereClause }),
     prisma.job.findMany({
-      where: { metadata: { not: Prisma.JsonNull } },
+      where: {
+        metadata: { not: Prisma.JsonNull },
+        ...(scopedCampusId ? {
+          OR: [
+            { postedByStaff: { campusId: scopedCampusId } },
+            { postedByStaff: { campusId: null } },
+            { postedByAlumni: { campusId: scopedCampusId } }
+          ]
+        } : {})
+      },
       select: { metadata: true },
     }),
   ]);
@@ -360,6 +394,11 @@ export async function createAdminJobAction(formData: JobSchemaType): Promise<Act
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+      return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+    }
+
     const validated = jobSchema.safeParse(formData);
     if (!validated.success) return { success: false, error: 'Validation failed' };
 
@@ -384,6 +423,11 @@ export async function toggleAdminJobStatusAction(id: string, isActive: boolean):
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+      return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+    }
+
     await prisma.job.update({ where: { id }, data: { isActive } });
     return { success: true };
   } catch (error: any) {
@@ -396,6 +440,11 @@ export async function deleteJobAction(id: string): Promise<ActionResult> {
   try {
     const staff = await getAuthenticatedStaff();
     if (!staff) return { success: false, error: 'Unauthorized' };
+
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('jobs')) {
+      return { success: false, error: 'Forbidden: Access denied to opportunities module' };
+    }
 
     await prisma.job.delete({ where: { id } });
     return { success: true };

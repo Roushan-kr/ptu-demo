@@ -75,6 +75,19 @@ export async function POST(req: NextRequest) {
       data: updateData as any,
     });
 
+    if (currentRole || currentCompany) {
+      await prisma.workExperience.create({
+        data: {
+          alumniId: updated.id,
+          company: currentCompany?.trim() || 'Not Specified',
+          title: currentRole?.trim() || 'Not Specified',
+          location: city?.trim() || null,
+          startDate: new Date(),
+          isCurrent: true,
+        },
+      });
+    }
+
     const accessToken = generateAlumniAccessToken({
       id: updated.id,
       email: updated.email,

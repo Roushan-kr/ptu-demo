@@ -9,6 +9,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const modules = Array.isArray(staff.modules) ? (staff.modules as string[]) : [];
+    if (staff.role !== 'ADMIN' && !modules.includes('requests')) {
+      return NextResponse.json({ error: 'Forbidden: Access denied to registration requests' }, { status: 403 });
+    }
+
     let scopedCampusId: string | null;
     try {
       scopedCampusId = resolveCampusScope(staff, staff.campusId);

@@ -85,6 +85,7 @@ export async function GET(req: NextRequest) {
         currentRole: true,
         currentCompany: true,
         city: true,
+        avatarUrl: true,
         campusId: true,
         campus: { select: { id: true, name: true } },
       },

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, LucideIcon } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 
 // Define the shape of a navigation item
 interface NavItem {
@@ -36,10 +36,46 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/admin/auth/login');
+    if (!loading) {
+      if (!user) {
+        router.replace('/admin/auth/login');
+      } else if (user.role !== 'ADMIN') {
+        // 1. Subadmins cannot access /admin/subadmins
+        if (pathname === '/admin/subadmins' || pathname.startsWith('/admin/subadmins/')) {
+          const allowedModules = user.modules || [];
+          const firstAllowed = allModules.find(item => allowedModules.includes(item.module));
+          if (firstAllowed) {
+            router.replace(firstAllowed.href);
+          } else {
+            router.replace('/admin/auth/login');
+          }
+          return;
+        }
+
+        // 2. Subadmins can only access modules they have permission for
+        const currentItem = allModules.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`));
+        if (currentItem) {
+          const allowedModules = user.modules || [];
+          if (!allowedModules.includes(currentItem.module)) {
+            // Find first allowed module
+            const firstAllowed = allModules.find(item => allowedModules.includes(item.module));
+            if (firstAllowed) {
+              router.replace(firstAllowed.href);
+            } else {
+              toast.error("No access to this module.");
+            }
+          }
+        } else if (pathname === '/admin' || pathname === '/admin/') {
+          // If accessing root, redirect to first allowed module
+          const allowedModules = user.modules || [];
+          const firstAllowed = allModules.find(item => allowedModules.includes(item.module));
+          if (firstAllowed) {
+            router.replace(firstAllowed.href);
+          }
+        }
+      }
     }
-  }, [loading, user, router]);
+  }, [loading, user, pathname, router]);
 
   // Build dynamic nav items based on role and modules
   let navItems: NavItem[] = []; // ✅ explicit type
