@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
         _count: {
           select: { rsvps: true }
         },
-        createdBy: {
+        postedByStaff: {
           select: {
             id: true,
             name: true,
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
         coverImageUrl: coverImageUrl || null,
         rsvpDeadline: rsvpDeadlineParsed,
         isPublished: isPublished === undefined ? false : !!isPublished,
-        createdById: staff.id
+        postedByStaffId: staff.id
       }
     });
 

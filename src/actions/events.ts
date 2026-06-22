@@ -29,7 +29,7 @@ function buildEventWhere(
   params: EventFilterParams,
   extra?: Prisma.EventWhereInput,
 ): Prisma.EventWhereInput {
-  const { search, category, dateFrom, dateTo, categoryScope } = params;
+  const { search, category, dateFrom, dateTo, categoryScope, postedBy } = params;
   const and: Prisma.EventWhereInput[] = [];
 
   if (search) {
@@ -46,6 +46,12 @@ function buildEventWhere(
     and.push({ category });
   } else if (categoryScope && categoryScope.length > 0) {
     and.push({ category: { in: categoryScope } });
+  }
+
+  if (postedBy === 'staff') {
+    and.push({ postedByStaffId: { not: null } });
+  } else if (postedBy === 'alumni') {
+    and.push({ postedByAlumniId: { not: null } });
   }
 
   if (dateFrom) and.push({ eventDate: { gte: new Date(dateFrom) } });

@@ -56,7 +56,7 @@ export const eventSchema = z.object({
     .min(10, 'Description must be at least 10 characters')
     .max(5000, 'Description must not exceed 5000 characters'),
   category: z.string().min(1, 'Please select a category'),
-  eventDate: z.preprocess(preprocessDate, z.date({ required_error: 'Event date is required' })),
+  eventDate: z.preprocess(preprocessDate, z.date({ message: 'Event date is required' })),
   venue: z.string().min(2, 'Venue must be at least 2 characters'),
   coverImageUrl: z.string().url('Please enter a valid image URL').or(z.literal('')).optional(),
   rsvpDeadline: z.preprocess(preprocessDate, z.date().nullable().optional()),
