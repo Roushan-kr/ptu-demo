@@ -59,7 +59,7 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
     watch,
     formState: { errors },
   } = useForm<JobFormValues>({
-    resolver: zodResolver(jobSchema),
+    resolver: zodResolver(jobSchema) as any,
     defaultValues: {
       title: '',
       company: '',
@@ -73,7 +73,7 @@ export function RegisterJobModal({ isOpen, onClose, isAdmin = false }: RegisterJ
       industry: 'Software',
       customIndustry: '',
       skills: '',
-      expireAt: '',
+      expireAt: null,
     },
   });
 

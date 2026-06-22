@@ -79,6 +79,7 @@ function NewsCornerClient() {
         page,
         limit: 12,
         categoryScope: [...NEWSCORNER_CATEGORIES],
+        postedBy: 'alumni',
       }),
   });
 
@@ -88,7 +89,7 @@ function NewsCornerClient() {
       editingEvent
         ? updateEventAction(editingEvent.id, { ...formData, eventDate: new Date(formData.eventDate) })
         : createEventAction({ ...formData, eventDate: new Date(formData.eventDate) }),
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success(editingEvent ? 'Post updated!' : 'Post created!');
         queryClient.invalidateQueries({ queryKey: ['newscorner'] });

@@ -61,13 +61,14 @@ function AlumniEventsClient() {
         category: selectedCategory,
         limit: 50,
         categoryScope: [...CALENDAR_CATEGORIES],
+        postedBy: 'staff',
       }),
   });
 
   // ── RSVP mutation ─────────────────────────────────────────────────────────
   const rsvpMutation = useMutation({
     mutationFn: () => submitRsvpAction(rsvpEvent!.id, rsvpStatus, rsvpMessage),
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success('RSVP submitted!');
         queryClient.invalidateQueries({ queryKey: ['alumni-events'] });

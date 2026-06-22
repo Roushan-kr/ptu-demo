@@ -89,4 +89,5 @@ export interface EventFilterParams {
   showDrafts?: boolean;
   /** If provided, only fetch events whose category is in this list */
   categoryScope?: string[];
+  postedBy?: 'staff' | 'alumni';
 }
