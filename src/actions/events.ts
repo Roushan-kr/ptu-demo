@@ -260,8 +260,15 @@ export async function getAdminEventsAction(params: EventFilterParams): Promise<{
 
   const { tab = 'all', page = 1, limit = 10 } = params;
 
-  const tabClause: Prisma.EventWhereInput | undefined =
-    tab === 'posted' ? { postedByStaffId: staff.id } : undefined;
+  // Build tab-specific WHERE clause
+  let tabClause: Prisma.EventWhereInput | undefined;
+  if (tab === 'posted') {
+    tabClause = { postedByStaffId: staff.id };
+  } else if (tab === 'alumni') {
+    tabClause = { postedByAlumniId: { not: null } };
+  } else if (tab === 'staff') {
+    tabClause = { postedByStaffId: { not: null } };
+  }
 
   const whereClause = buildEventWhere(params, tabClause);
   const skip = (page - 1) * limit;

@@ -1,10 +1,19 @@
-// src/app/alumni/(protected)/noticeboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, Briefcase, Users, BookOpen, Award } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Calendar,
+  Briefcase,
+  Rocket,
+  MapPin,
+  Globe,
+  ExternalLink,
+  ArrowRight,
+  Users,
+} from 'lucide-react';
 
 interface AlumniProfile {
   name: string;
@@ -18,23 +27,66 @@ interface AlumniProfile {
   avatarUrl?: string;
 }
 
-const upcomingEvents = [
-  { id: 1, title: 'Batch 2020 Reunion', date: 'June 15, 2024', location: 'Chandigarh', attendees: 42 },
-  { id: 2, title: 'Tech Career Summit', date: 'June 22, 2024', location: 'Online', attendees: 128 },
-  { id: 3, title: 'Networking Brunch', date: 'June 29, 2024', location: 'Chandigarh', attendees: 35 },
-];
+interface EventSnippet {
+  id: string;
+  title: string;
+  eventDate: string;
+  venue: string;
+  category: string;
+  coverImageUrl: string | null;
+}
 
-const jobOpportunities = [
-  { id: 1, title: 'Senior Software Engineer', company: 'TechCorp India', location: 'Bangalore', posted: '2 days ago' },
-  { id: 2, title: 'Product Manager', company: 'StartupXYZ', location: 'Pune', posted: '5 days ago' },
-  { id: 3, title: 'Data Scientist', company: 'AI Solutions', location: 'Remote', posted: '1 week ago' },
-];
+interface JobSnippet {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  createdAt: string;
+}
 
-const alumniHighlights = [
-  { id: 1, name: 'Rajesh Kumar', batch: '2015', role: 'CTO at TechCorp', achievement: 'Led team of 50+ engineers' },
-  { id: 2, name: 'Priya Singh', batch: '2018', role: 'Entrepreneur', achievement: 'Founded AI Startup (50M+ valuation)' },
-  { id: 3, name: 'Amit Patel', batch: '2016', role: 'VP Engineering at MNC', achievement: 'Patent holder in Cloud Technologies' },
-];
+interface StartupSnippet {
+  id: string;
+  name: string;
+  description: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  industry: string | null;
+  foundedYear: number | null;
+  founder: {
+    name: string;
+    currentRole: string | null;
+    avatarUrl: string | null;
+  };
+}
+
+function formatDate(dateStr: string) {
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+function getInitials(name: string) {
+  return name
+    ? name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2)
+    : 'S';
+}
 
 export default function AlumniNoticeboard() {
   const [profile, setProfile] = useState<AlumniProfile | null>(null);
@@ -43,11 +95,11 @@ export default function AlumniNoticeboard() {
 
   useEffect(() => {
     fetch('/api/alumni/me')
-      .then(res => {
+      .then((res) => {
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
         setProfile(data.user);
         setLoading(false);
       })
@@ -56,12 +108,51 @@ export default function AlumniNoticeboard() {
       });
   }, [router]);
 
+  // Fetch upcoming events (top 3)
+  const { data: eventsData } = useQuery({
+    queryKey: ['noticeboard-events'],
+    queryFn: async () => {
+      const res = await fetch(
+        '/api/alumni/events?limit=3&page=1&sort=date&showPast=false'
+      );
+      if (!res.ok) return { events: [] };
+      return res.json();
+    },
+    enabled: !loading,
+  });
+
+  // Fetch recent jobs (top 3)
+  const { data: jobsData } = useQuery({
+    queryKey: ['noticeboard-jobs'],
+    queryFn: async () => {
+      const res = await fetch('/api/alumni/jobs?limit=3&page=1');
+      if (!res.ok) return { jobs: [] };
+      return res.json();
+    },
+    enabled: !loading,
+  });
+
+  // Fetch featured startups (top 4)
+  const { data: startupsData } = useQuery({
+    queryKey: ['noticeboard-startups'],
+    queryFn: async () => {
+      const res = await fetch('/api/alumni/startups?limit=4&page=1&sort=Newest');
+      if (!res.ok) return { startups: [] };
+      return res.json();
+    },
+    enabled: !loading,
+  });
+
+  const events: EventSnippet[] = eventsData?.events || [];
+  const jobs: JobSnippet[] = jobsData?.jobs || [];
+  const startups: StartupSnippet[] = startupsData?.startups || [];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#003D7A] border-t-[#C41E3A] rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-gray-600">Loading noticeboard...</p>
+          <div className="w-12 h-12 border-4 border-[#003D7A] border-t-[#C41E3A] rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-gray-600 font-semibold">Loading noticeboard…</p>
         </div>
       </div>
     );
@@ -69,148 +160,217 @@ export default function AlumniNoticeboard() {
 
   return (
     <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-[#C41E3A] to-[#003D7A] text-white rounded-2xl p-8 shadow-lg">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Noticeboard 👋</h1>
-            <p className="text-red-100 text-lg">{profile?.branch} • Class of {profile?.batchYear}</p>
-            {profile?.currentCompany && <p className="text-red-100 mt-1">📍 {profile.currentCompany}, {profile.city}</p>}
-          </div>
+
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-[#C41E3A] to-[#003D7A] text-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, white 0%, transparent 60%)' }}
+        />
+        <div className="relative">
+          <p className="text-red-200 text-sm font-semibold uppercase tracking-widest mb-1">Welcome back</p>
+          <h1 className="text-3xl md:text-4xl font-black mb-1">{profile?.name} 👋</h1>
+          <p className="text-red-100">{profile?.branch} · Class of {profile?.batchYear}</p>
+          {profile?.currentCompany && (
+            <p className="text-red-100 mt-1 text-sm">
+              📍 {profile.currentRole ? `${profile.currentRole} at ` : ''}{profile.currentCompany}
+              {profile.city ? `, ${profile.city}` : ''}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Profile Quick Stats */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-[#C41E3A]">
-          <p className="text-gray-600 text-sm font-semibold mb-1">Email</p>
-          <p className="text-gray-900 font-semibold text-sm truncate">{profile?.email}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-[#003D7A]">
-          <p className="text-gray-600 text-sm font-semibold mb-1">College</p>
-          <p className="text-gray-900 font-semibold text-sm truncate">{profile?.college}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-[#0057B8]">
-          <p className="text-gray-600 text-sm font-semibold mb-1">Current Role</p>
-          <p className="text-gray-900 font-semibold text-sm truncate">{profile?.currentRole || 'Not specified'}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-md p-6 border-t-4 border-[#C41E3A]">
-          <p className="text-gray-600 text-sm font-semibold mb-1">Location</p>
-          <p className="text-gray-900 font-semibold text-sm truncate">{profile?.city || 'Not specified'}</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Email', value: profile?.email, border: '#C41E3A' },
+          { label: 'College', value: profile?.college, border: '#003D7A' },
+          { label: 'Current Role', value: profile?.currentRole || 'Not specified', border: '#0057B8' },
+          { label: 'Location', value: profile?.city || 'Not specified', border: '#C41E3A' },
+        ].map(({ label, value, border }) => (
+          <div key={label} className="bg-white rounded-xl shadow-sm p-5 border-t-4" style={{ borderTopColor: border }}>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">{label}</p>
+            <p className="text-gray-900 font-bold text-sm truncate">{value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Upcoming Events */}
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex items-center justify-between mb-6">
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#C41E3A]/10 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-[#C41E3A]" />
+            <div className="w-9 h-9 bg-rose-50 rounded-xl flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-[#C41E3A]" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
+            <h2 className="text-lg font-bold text-gray-900">Upcoming Events</h2>
           </div>
-          <Link href="/alumni/events" className="text-[#003D7A] hover:text-[#C41E3A] font-semibold text-sm">
-            View All →
+          <Link href="/alumni/events" className="flex items-center gap-1 text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition">
+            View All <ArrowRight size={13} />
           </Link>
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          {upcomingEvents.map(event => (
-            <div key={event.id} className="border-2 border-gray-200 rounded-xl p-5 hover:border-[#003D7A] hover:shadow-md transition">
-              <p className="text-sm text-[#C41E3A] font-bold uppercase tracking-wide mb-2">📅 {event.date}</p>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{event.title}</h3>
-              <p className="text-sm text-gray-600 mb-3">📍 {event.location}</p>
-              <button className="w-full py-2 border-2 border-[#003D7A] text-[#003D7A] font-semibold rounded-lg hover:bg-[#003D7A] hover:text-white transition text-sm">
-                Register ({event.attendees})
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+
+        {events.length === 0 ? (
+          <p className="text-sm text-slate-400 font-semibold text-center py-6">No upcoming events right now.</p>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-4">
+            {events.map((event) => (
+              <div key={event.id} className="rounded-xl border border-slate-100 overflow-hidden hover:shadow-md transition group">
+                {event.coverImageUrl ? (
+                  <img src={event.coverImageUrl} alt={event.title} className="w-full h-28 object-cover group-hover:scale-105 transition" />
+                ) : (
+                  <div className="w-full h-28 bg-gradient-to-br from-[#003D7A]/10 to-[#C41E3A]/10 flex items-center justify-center">
+                    <Calendar className="text-slate-300" size={28} />
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-[10px] font-bold text-[#C41E3A] uppercase tracking-wider mb-1">{formatDate(event.eventDate)}</p>
+                  <h3 className="text-sm font-bold text-gray-900 line-clamp-2 mb-1">{event.title}</h3>
+                  <p className="text-xs text-slate-500 flex items-center gap-1">
+                    <MapPin size={10} />
+                    {event.venue}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Job Opportunities */}
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex items-center justify-between mb-6">
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#003D7A]/10 rounded-lg flex items-center justify-center">
-              <Briefcase className="w-6 h-6 text-[#003D7A]" />
+            <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-[#003D7A]" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Job Opportunities</h2>
+            <h2 className="text-lg font-bold text-gray-900">Job Opportunities</h2>
           </div>
-          <Link href="/alumni/jobs" className="text-[#003D7A] hover:text-[#C41E3A] font-semibold text-sm">
-            View All →
+          <Link href="/alumni/opportunities" className="flex items-center gap-1 text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition">
+            View All <ArrowRight size={13} />
           </Link>
         </div>
-        <div className="space-y-3">
-          {jobOpportunities.map(job => (
-            <div key={job.id} className="border border-gray-200 rounded-xl p-4 hover:border-[#003D7A] hover:shadow-md transition">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900">{job.title}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{job.company} • {job.location}</p>
-                  <p className="text-xs text-gray-500 mt-2">Posted {job.posted}</p>
+
+        {jobs.length === 0 ? (
+          <p className="text-sm text-slate-400 font-semibold text-center py-6">No job listings right now.</p>
+        ) : (
+          <div className="space-y-3">
+            {jobs.map((job) => (
+              <div key={job.id} className="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 hover:border-[#003D7A]/30 hover:shadow-sm transition">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-gray-900 truncate">{job.title}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {job.company} · <MapPin size={9} className="inline" /> {job.location}
+                  </p>
                 </div>
-                <button className="px-4 py-2 bg-[#003D7A] text-white rounded-lg hover:bg-[#002654] transition text-sm font-semibold">
-                  View
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] text-slate-400 font-semibold">{timeAgo(job.createdAt)}</span>
+                  <Link
+                    href="/alumni/opportunities"
+                    className="px-3 py-1.5 bg-[#003D7A] text-white rounded-lg text-[10px] font-bold hover:bg-[#002b56] transition"
+                  >
+                    View
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-      {/* Alumni Network Highlights */}
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex items-center justify-between mb-6">
+      {/* Featured Alumni Startups */}
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#0057B8]/10 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-[#0057B8]" />
+            <div className="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center">
+              <Rocket className="w-5 h-5 text-violet-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Alumni Highlights</h2>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Alumni Startups</h2>
+              <p className="text-[10px] text-slate-400 font-semibold">Businesses launched by your fellow alumni</p>
+            </div>
           </div>
-          <Link href="/alumni/networking" className="text-[#003D7A] hover:text-[#C41E3A] font-semibold text-sm">
-            View Network →
+          <Link href="/alumni/startups" className="flex items-center gap-1 text-xs font-bold text-[#003D7A] hover:text-[#C41E3A] transition">
+            View All <ArrowRight size={13} />
           </Link>
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          {alumniHighlights.map(alumni => (
-            <div key={alumni.id} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 hover:shadow-md transition">
-              <p className="text-xs font-bold text-[#C41E3A] uppercase tracking-wide mb-2">Batch {alumni.batch}</p>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{alumni.name}</h3>
-              <p className="text-sm text-[#003D7A] font-semibold mb-3">{alumni.role}</p>
-              <p className="text-sm text-gray-700 italic">"✨ {alumni.achievement}"</p>
-            </div>
-          ))}
-        </div>
+
+        {startups.length === 0 ? (
+          <div className="text-center py-8">
+            <Rocket className="mx-auto text-slate-200 mb-2" size={32} />
+            <p className="text-sm text-slate-400 font-semibold">No startups listed yet.</p>
+            <Link href="/alumni/startups" className="inline-block mt-2 text-xs font-bold text-[#003D7A] hover:underline">
+              Be the first to list yours →
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {startups.map((startup) => (
+              <div key={startup.id} className="rounded-xl border border-slate-100 overflow-hidden hover:shadow-md transition group flex flex-col">
+                {/* Logo */}
+                <div className="h-24 bg-slate-50 flex items-center justify-center p-3 border-b border-slate-50">
+                  {startup.logoUrl ? (
+                    <img src={startup.logoUrl} alt={startup.name} className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#003D7A] to-[#C41E3A] flex items-center justify-center text-white font-black text-lg">
+                      {getInitials(startup.name)}
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="p-3 flex-1 flex flex-col justify-between gap-2">
+                  <div>
+                    <p className="font-bold text-xs text-gray-900 truncate">{startup.name}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{startup.description}</p>
+                  </div>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center text-[8px] font-bold text-slate-500 shrink-0">
+                        {startup.founder.avatarUrl ? (
+                          <img src={startup.founder.avatarUrl} alt={startup.founder.name} className="w-full h-full object-cover" />
+                        ) : getInitials(startup.founder.name)}
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-600 truncate max-w-[60px]">{startup.founder.name}</span>
+                    </div>
+                    {startup.websiteUrl && (
+                      <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-[#003D7A] hover:text-[#C41E3A] transition shrink-0" title="Visit website">
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Quick Links */}
+      <div className="grid md:grid-cols-2 gap-5">
+        <Link href="/alumni/profile"
+          className="bg-gradient-to-br from-[#C41E3A] to-[#a01830] text-white rounded-2xl p-6 hover:shadow-lg transition group flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <Users size={22} />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Update Your Profile</p>
+            <p className="text-red-200 text-xs mt-0.5">Keep your details current for the network</p>
+          </div>
+          <ArrowRight size={16} className="ml-auto opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition" />
+        </Link>
+
+        <Link href="/alumni/networking"
+          className="bg-gradient-to-br from-[#003D7A] to-[#002654] text-white rounded-2xl p-6 hover:shadow-lg transition group flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <Users size={22} />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Explore the Network</p>
+            <p className="text-blue-200 text-xs mt-0.5">Connect with fellow alumni</p>
+          </div>
+          <ArrowRight size={16} className="ml-auto opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition" />
+        </Link>
       </div>
 
-      {/* Additional Resources */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-[#0057B8]/10 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-[#0057B8]" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Learning Resources</h3>
-          </div>
-          <p className="text-gray-600 mb-4">Access exclusive webinars, courses, and mentorship programs from experienced alumni.</p>
-          <button className="w-full py-3 bg-[#0057B8] text-white rounded-lg hover:bg-[#003D7A] transition font-semibold">
-            Explore Resources
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-[#C41E3A]/10 rounded-lg flex items-center justify-center">
-              <Award className="w-6 h-6 text-[#C41E3A]" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Your Profile</h3>
-          </div>
-          <p className="text-gray-600 mb-4">Complete and update your profile to make the most of the alumni network.</p>
-          <Link href="/alumni/profile" className="block w-full py-3 bg-[#C41E3A] text-white rounded-lg hover:bg-[#A01830] transition font-semibold text-center">
-            Edit Profile
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
