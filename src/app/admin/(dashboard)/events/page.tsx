@@ -16,6 +16,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  UserCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -30,6 +32,7 @@ import {
 import { CALENDAR_CATEGORIES } from "@/schemas/event";
 import type { EventItemType, RsvpDetailsType } from "@/types/events";
 import Link from "next/link";
+import { ImageUploader } from "@/components/ImageUploader";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -67,7 +70,7 @@ function AdminEventsClient() {
   const searchTerm = searchParams.get("search") || "";
   const selectedCategory = searchParams.get("category") || "All";
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const tab = (searchParams.get("tab") || "all") as "all" | "posted";
+  const tab = (searchParams.get("tab") || "all") as "all" | "posted" | "alumni" | "staff";
 
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventItemType | null>(null);
@@ -248,11 +251,13 @@ function AdminEventsClient() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(
             [
               ["all", "All Events"],
               ["posted", "My Events"],
+              ["staff", "Staff Posted"],
+              ["alumni", "Alumni Posted"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -481,19 +486,16 @@ function AdminEventsClient() {
                 />
               </div>
 
-              {/* Cover Image */}
+              {/* Cover Image - Cloudinary Upload */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                  Cover Image URL
+                  Cover Image
                 </label>
-                <input
-                  type="url"
+                <ImageUploader
                   value={formData.coverImageUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, coverImageUrl: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
-                  placeholder="https://..."
+                  onChange={(url) => setFormData({ ...formData, coverImageUrl: url })}
+                  folder="event_covers"
+                  placeholder="Upload event cover image"
                 />
               </div>
 
@@ -731,7 +733,7 @@ function AdminEventRow({
             {event.isPublished ? "Published" : "Draft"}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
           <span className="flex items-center gap-1">
             <Calendar size={12} />
             {formatDate(event.eventDate)}
@@ -744,6 +746,18 @@ function AdminEventRow({
             <Users size={12} />
             {event.attendingCount} attending
           </span>
+          {/* Poster tag */}
+          {event.postedByAlumni ? (
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-50 text-violet-700 rounded-full text-[10px] font-bold">
+              <UserCircle size={10} />
+              {event.postedByAlumni.name}
+            </span>
+          ) : event.postedByStaff ? (
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold">
+              <ShieldCheck size={10} />
+              {event.postedByStaff.name}
+            </span>
+          ) : null}
         </div>
         <p className="text-xs text-slate-400 mt-0.5">{event.category}</p>
       </div>

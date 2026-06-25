@@ -1,0 +1,98 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
+import { startupSchema } from '@/schemas/startup';
+
+// ─── PATCH: Update a startup ──────────────────────────────────────────────────
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const alumni = await getCurrentAlumni();
+    if (!alumni) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const startup = await prisma.startUp.findUnique({
+      where: { id: params.id },
+      select: { founderId: true },
+    });
+
+    if (!startup) {
+      return NextResponse.json({ error: 'Startup not found' }, { status: 404 });
+    }
+
+    if (startup.founderId !== alumni.id) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const validated = startupSchema.safeParse(body);
+
+    if (!validated.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validated.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    // Resolve custom industry
+    let industry = validated.data.industry;
+    if (industry === 'Other') {
+      industry = validated.data.customIndustry || '';
+    }
+
+    const updated = await prisma.startUp.update({
+      where: { id: params.id },
+      data: {
+        name: validated.data.name,
+        description: validated.data.description,
+        industry,
+        websiteUrl: validated.data.websiteUrl || null,
+        logoUrl: validated.data.logoUrl || null,
+        foundedYear: validated.data.foundedYear || null,
+      },
+    });
+
+    return NextResponse.json({ success: true, startup: updated });
+  } catch (error) {
+    console.error('[PATCH_STARTUP_ERROR]', error);
+    return NextResponse.json({ error: 'Failed to update startup' }, { status: 500 });
+  }
+}
+
+// ─── DELETE: Remove a startup ─────────────────────────────────────────────────
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const alumni = await getCurrentAlumni();
+    if (!alumni) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const startup = await prisma.startUp.findUnique({
+      where: { id: params.id },
+      select: { founderId: true },
+    });
+
+    if (!startup) {
+      return NextResponse.json({ error: 'Startup not found' }, { status: 404 });
+    }
+
+    if (startup.founderId !== alumni.id) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    await prisma.startUp.delete({ where: { id: params.id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE_STARTUP_ERROR]', error);
+    return NextResponse.json({ error: 'Failed to delete startup' }, { status: 500 });
+  }
+}

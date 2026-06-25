@@ -31,7 +31,7 @@ function AdminJobsPageClient() {
   const selectedWorkplace = searchParams.get('workplace') || 'All';
   const selectedExp = searchParams.get('experience') || 'All';
   const selectedIndustry = searchParams.get('industry') || 'All';
-  const activeTab = (searchParams.get('tab') || 'all') as 'all' | 'posted';
+  const activeTab = (searchParams.get('tab') || 'all') as 'all' | 'posted' | 'alumni' | 'staff';
   const showOpenOnly = searchParams.get('openOnly') === 'true';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
@@ -169,18 +169,20 @@ function AdminJobsPageClient() {
         <div className="lg:col-span-8 space-y-6">
           
           {/* Tabs Filter Bar */}
-          <div className="flex gap-2 pb-2">
+          <div className="flex gap-2 pb-2 flex-wrap">
             {[
-              { id: 'all', label: 'All opportunities' },
-              { id: 'posted', label: 'Posted by Staff' }
+              { id: 'all', label: 'All Opportunities' },
+              { id: 'posted', label: 'My Posts' },
+              { id: 'staff', label: 'Staff Posted' },
+              { id: 'alumni', label: 'Alumni Posted' },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => updateQueryParam('tab', tab.id)}
                 className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
                   activeTab === tab.id
-                    ? 'bg-slate-200/80 text-gray-800'
-                    : 'text-slate-500 hover:text-gray-800'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {tab.label}

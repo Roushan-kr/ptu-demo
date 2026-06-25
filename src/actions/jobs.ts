@@ -16,7 +16,7 @@ export interface JobFilterParams {
   workplace?: string;
   experience?: string;
   industry?: string;
-  tab?: 'all' | 'posted' | 'applied';
+  tab?: 'all' | 'posted' | 'applied' | 'alumni' | 'staff';
   page?: number;
   limit?: number;
   showOpenOnly?: boolean;
@@ -314,8 +314,15 @@ export async function getAdminJobsAction(params: JobFilterParams) {
   const { tab = 'all', page = 1, limit = 8 } = params;
   const skip = (page - 1) * limit;
 
-  const tabClause: Prisma.JobWhereInput | undefined =
-    tab === 'posted' ? { postedByStaffId: { not: null } } : undefined;
+  // Build tab-specific WHERE clause
+  let tabClause: Prisma.JobWhereInput | undefined;
+  if (tab === 'posted') {
+    tabClause = { postedByStaffId: { not: null } };
+  } else if (tab === 'alumni') {
+    tabClause = { postedByAlumniId: { not: null } };
+  } else if (tab === 'staff') {
+    tabClause = { postedByStaffId: { not: null } };
+  }
 
   const whereClause = buildWhereClause(params, tabClause);
 

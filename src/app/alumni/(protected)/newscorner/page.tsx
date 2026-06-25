@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { getEventsAction, createEventAction, updateEventAction } from '@/actions/events';
 import { NEWSCORNER_CATEGORIES } from '@/schemas/event';
 import type { EventItemType, EventFilterParams } from '@/types/events';
+import { ImageUploader } from '@/components/ImageUploader';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -386,15 +387,14 @@ function NewsCornerClient() {
                 </div>
               </div>
 
-              {/* Cover Image */}
+              {/* Cover Image - Cloudinary Upload */}
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Cover Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/cover.jpg"
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Cover Image</label>
+                <ImageUploader
                   value={form.coverImageUrl}
-                  onChange={(e) => setForm({ ...form, coverImageUrl: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-xs font-semibold text-gray-800 placeholder:text-gray-400"
+                  onChange={(url) => setForm({ ...form, coverImageUrl: url })}
+                  folder="newscorner_covers"
+                  placeholder="Upload a cover image for your post"
                 />
               </div>
 

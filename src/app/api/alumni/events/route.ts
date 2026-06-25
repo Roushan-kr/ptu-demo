@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     if (!alumni) {
       return NextResponse.json({ error: 'Alumni not found' }, { status: 404 });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
   }
 
@@ -25,9 +25,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const sort = searchParams.get('sort') || 'date';
+    const skip = (page - 1) * limit;
 
     const whereClause: any = {
-      isPublished: true
+      isPublished: true,
     };
 
     if (category && category !== 'All') {
@@ -38,43 +42,59 @@ export async function GET(req: NextRequest) {
       whereClause.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-        { venue: { contains: search, mode: 'insensitive' } }
+        { venue: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const events = await prisma.event.findMany({
-      where: whereClause,
-      orderBy: { eventDate: 'asc' }
-    });
+    const orderBy: any =
+      sort === 'newest' ? { createdAt: 'desc' } : { eventDate: 'asc' };
+
+    const [events, totalCount] = await Promise.all([
+      prisma.event.findMany({
+        where: whereClause,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          postedByAlumni: {
+            select: { id: true, name: true, avatarUrl: true, currentRole: true },
+          },
+          postedByStaff: {
+            select: { id: true, name: true },
+          },
+        },
+      }),
+      prisma.event.count({ where: whereClause }),
+    ]);
 
     const eventsWithRsvps = await Promise.all(
       events.map(async (event) => {
-        const attendingCount = await prisma.rsvp.count({
-          where: { eventId: event.id, status: 'ATTENDING' }
-        });
-
-        const myRsvp = await prisma.rsvp.findUnique({
-          where: {
-            alumniId_eventId: {
-              alumniId: alumni.id,
-              eventId: event.id
-            }
-          },
-          select: {
-            status: true,
-            message: true
-          }
-        });
+        const [attendingCount, myRsvp] = await Promise.all([
+          prisma.rsvp.count({ where: { eventId: event.id, status: 'ATTENDING' } }),
+          prisma.rsvp.findUnique({
+            where: { alumniId_eventId: { alumniId: alumni.id, eventId: event.id } },
+            select: { status: true, message: true },
+          }),
+        ]);
 
         return {
           ...event,
           attendingCount,
-          myRsvp: myRsvp || null
+          myRsvp: myRsvp || null,
+          postedByMe: event.postedByAlumniId === alumni.id,
         };
       })
     );
 
-    return NextResponse.json(eventsWithRsvps);
+    return NextResponse.json({
+      events: eventsWithRsvps,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching alumni events:', error);
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });

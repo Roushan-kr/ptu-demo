@@ -2,13 +2,14 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
+import { toast } from 'react-hot-toast';
 
 // Static Subcomponents
 import { ListBusinessBanner } from '@/components/startups/ListBusinessBanner';
 import { StartupFilters } from '@/components/startups/StartupFilters';
-import { StartupCard } from '@/components/startups/StartupCard';
+import { StartupCard, type StartUpItem } from '@/components/startups/StartupCard';
 
 // Dynamically imported Modal (Lazy Loaded on Demand client-side to save bundle size)
 const RegisterStartupModal = dynamic(
@@ -16,25 +17,6 @@ const RegisterStartupModal = dynamic(
   { ssr: false }
 );
 
-interface StartUpItem {
-  id: string;
-  name: string;
-  description: string;
-  websiteUrl?: string | null;
-  logoUrl?: string | null;
-  industry?: string | null;
-  foundedYear?: number | null;
-  founderId: string;
-  createdAt: string;
-  updatedAt: string;
-  founder: {
-    id: string;
-    name: string;
-    currentRole?: string | null;
-    avatarUrl?: string | null;
-    city?: string | null;
-  };
-}
 
 interface StartupsApiResponse {
   startups: StartUpItem[];
@@ -55,6 +37,7 @@ function StartupsShowcaseClient() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   // Read search params
   const searchQuery = searchParams.get('search') || '';
@@ -64,8 +47,9 @@ function StartupsShowcaseClient() {
   const sortBy = searchParams.get('sort') || 'Name';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
-  // Modal form state
+  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStartup, setEditingStartup] = useState<StartUpItem | null>(null);
 
   // Helper to update search params
   const updateQueryParam = (key: string, value: string) => {
@@ -75,7 +59,6 @@ function StartupsShowcaseClient() {
     } else {
       params.delete(key);
     }
-    // Always reset to page 1 on filter changes unless we're changing the page itself
     if (key !== 'page') {
       params.delete('page');
     }
@@ -107,7 +90,36 @@ function StartupsShowcaseClient() {
     },
   });
 
-  // Get unique filter values from API filters metadata (fallback to initial defaults)
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/alumni/startups/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Startup deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['startups'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to delete startup');
+    },
+  });
+
+  const handleEdit = (startup: StartUpItem) => {
+    setEditingStartup(startup);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingStartup(null);
+  };
+
+  // Get unique filter values from API filters metadata
   const industries = ['All', ...(data?.filters?.industries || ['Interior Design & Decorative Art', 'Graphic Design', 'Food Production'])];
   const locations = ['All', ...(data?.filters?.locations || [])];
   const designations = ['All', ...(data?.filters?.designations || [])];
@@ -139,7 +151,7 @@ function StartupsShowcaseClient() {
         
         {/* Left Side: Listing Box, Search, Filters */}
         <div className="lg:col-span-4 space-y-6">
-          <ListBusinessBanner onOpenModal={() => setIsModalOpen(true)} />
+          <ListBusinessBanner onOpenModal={() => { setEditingStartup(null); setIsModalOpen(true); }} />
           <StartupFilters 
             searchQuery={searchQuery}
             selectedIndustry={selectedIndustry}
@@ -178,7 +190,12 @@ function StartupsShowcaseClient() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {data.startups.map((startup) => (
-                  <StartupCard key={startup.id} startup={startup} />
+                  <StartupCard
+                    key={startup.id}
+                    startup={startup}
+                    onEdit={handleEdit}
+                    onDelete={(id) => deleteMutation.mutate(id)}
+                  />
                 ))}
               </div>
 
@@ -210,8 +227,12 @@ function StartupsShowcaseClient() {
 
       </div>
 
-      {/* Modal - List new Business */}
-      <RegisterStartupModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Modal - List new Business or Edit existing */}
+      <RegisterStartupModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        startup={editingStartup}
+      />
 
     </div>
   );

@@ -4,30 +4,47 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { startupSchema, type StartupSchemaType } from '@/schemas/startup';
+import { ImageUploader } from '@/components/ImageUploader';
+import { useEffect } from 'react';
+
+interface StartupItem {
+  id: string;
+  name: string;
+  description: string;
+  websiteUrl?: string | null;
+  logoUrl?: string | null;
+  industry?: string | null;
+  foundedYear?: number | null;
+}
 
 interface RegisterStartupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** If provided, modal opens in edit mode for this startup */
+  startup?: StartupItem | null;
 }
 
-export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalProps) {
+export function RegisterStartupModal({ isOpen, onClose, startup }: RegisterStartupModalProps) {
   const queryClient = useQueryClient();
+  const isEditing = !!startup;
 
   const createStartupMutation = useMutation({
-    mutationFn: async (formData: StartupSchemaType) => {
-      const response = await fetch('/api/alumni/startups', {
-        method: 'POST',
+    mutationFn: async (formData: StartupSchemaType & { logoUrl?: string }) => {
+      const url = isEditing ? `/api/alumni/startups/${startup!.id}` : '/api/alumni/startups';
+      const method = isEditing ? 'PATCH' : 'POST';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.error || 'Failed to register startup');
+        throw new Error(errData.error || `Failed to ${isEditing ? 'update' : 'register'} startup`);
       }
       return response.json();
     },
     onSuccess: () => {
-      toast.success('Business registered successfully!');
+      toast.success(isEditing ? 'Business updated successfully!' : 'Business registered successfully!');
       queryClient.invalidateQueries({ queryKey: ['startups'] });
       onClose();
       reset();
@@ -42,6 +59,7 @@ export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalPr
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<StartupSchemaType>({
     resolver: zodResolver(startupSchema),
@@ -56,7 +74,35 @@ export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalPr
     },
   });
 
+  // Populate form when editing
+  useEffect(() => {
+    if (startup && isOpen) {
+      const knownIndustries = ['Interior Design & Decorative Art', 'Graphic Design', 'Food Production'];
+      const isKnown = knownIndustries.includes(startup.industry || '');
+      reset({
+        name: startup.name,
+        description: startup.description,
+        industry: isKnown ? (startup.industry || '') : 'Other',
+        customIndustry: isKnown ? '' : (startup.industry || ''),
+        websiteUrl: startup.websiteUrl || '',
+        logoUrl: startup.logoUrl || '',
+        foundedYear: startup.foundedYear ?? undefined,
+      });
+    } else if (!startup && isOpen) {
+      reset({
+        name: '',
+        description: '',
+        industry: 'Interior Design & Decorative Art',
+        customIndustry: '',
+        websiteUrl: '',
+        logoUrl: '',
+        foundedYear: undefined,
+      });
+    }
+  }, [startup, isOpen, reset]);
+
   const watchedIndustry = watch('industry');
+  const watchedLogoUrl = watch('logoUrl');
 
   const onSubmit = (formData: StartupSchemaType) => {
     const payload = { ...formData } as any;
@@ -74,10 +120,12 @@ export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalPr
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-100">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <h3 className="font-bold text-gray-900 text-sm">List your startup</h3>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+          <h3 className="font-bold text-gray-900 text-sm">
+            {isEditing ? 'Edit your startup' : 'List your startup'}
+          </h3>
           <button 
             onClick={onClose}
             className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition"
@@ -87,7 +135,7 @@ export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalPr
         </div>
 
         {/* Modal Body / Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Business Name *</label>
             <input 
@@ -173,15 +221,14 @@ export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalPr
             {errors.websiteUrl && <p className="text-[10px] text-red-500 mt-1">{errors.websiteUrl.message}</p>}
           </div>
 
+          {/* Cloudinary Logo Upload */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Logo Image Link</label>
-            <input 
-              type="url" 
-              placeholder="https://example.com/logo.jpg"
-              {...register('logoUrl')}
-              className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:border-[#003D7A] text-xs font-semibold text-gray-800 placeholder:text-gray-400 ${
-                errors.logoUrl ? 'border-red-500 focus:border-red-500' : 'border-slate-200'
-              }`}
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1.5">Logo / Brand Image</label>
+            <ImageUploader
+              value={watchedLogoUrl || ''}
+              onChange={(url) => setValue('logoUrl', url, { shouldValidate: true })}
+              folder="startup_logos"
+              placeholder="Upload your startup logo"
             />
             {errors.logoUrl && <p className="text-[10px] text-red-500 mt-1">{errors.logoUrl.message}</p>}
           </div>
@@ -203,7 +250,7 @@ export function RegisterStartupModal({ isOpen, onClose }: RegisterStartupModalPr
               {createStartupMutation.isPending && (
                 <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              <span>Register Business</span>
+              <span>{isEditing ? 'Save Changes' : 'Register Business'}</span>
             </button>
           </div>
         </form>

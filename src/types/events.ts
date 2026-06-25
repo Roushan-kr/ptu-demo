@@ -83,7 +83,7 @@ export interface EventFilterParams {
   category?: string;
   dateFrom?: string;
   dateTo?: string;
-  tab?: 'all' | 'posted' | 'attended';
+  tab?: 'all' | 'posted' | 'attended' | 'alumni' | 'staff';
   page?: number;
   limit?: number;
   showDrafts?: boolean;

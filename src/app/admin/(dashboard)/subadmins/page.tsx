@@ -28,6 +28,7 @@ const availableModules = [
   { name: 'Alumni Management', value: 'alumni' },
   { name: 'Opportunities', value: 'jobs' },
   { name: 'Events', value: 'events' },
+  { name: 'Startups', value: 'startups' },
   { name: 'Registration Requests', value: 'requests' },
 ];
 

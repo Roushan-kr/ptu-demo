@@ -4,7 +4,17 @@ import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
 import { startupSchema } from '@/schemas/startup';
 import { Prisma } from '@prisma/client';
 
+// ─── Helper: resolve current alumni (optional, doesn't throw) ────────────────
+async function tryGetCurrentAlumni() {
+  try {
+    return await getCurrentAlumni();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
+  const currentAlumni = await tryGetCurrentAlumni();
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
@@ -89,8 +99,14 @@ export async function GET(req: NextRequest) {
     const locationsList = Array.from(new Set(distinctFounders.map((item) => item.city).filter(Boolean))) as string[];
     const designationsList = Array.from(new Set(distinctFounders.map((item) => item.currentRole).filter(Boolean))) as string[];
 
+    // Annotate each startup with postedByMe flag
+    const startupsWithMeta = startups.map((s) => ({
+      ...s,
+      postedByMe: currentAlumni ? s.founderId === currentAlumni.id : false,
+    }));
+
     return NextResponse.json({
-      startups,
+      startups: startupsWithMeta,
       pagination: {
         page,
         limit,

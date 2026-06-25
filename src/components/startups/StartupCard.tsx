@@ -1,12 +1,17 @@
-import { MapPin, Globe, ExternalLink } from 'lucide-react';
+import { MapPin, Globe, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 
-interface StartUpItem {
+export interface StartUpItem {
   id: string;
   name: string;
   description: string;
   websiteUrl?: string | null;
   logoUrl?: string | null;
   industry?: string | null;
+  foundedYear?: number | null;
+  founderId: string;
+  postedByMe?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   founder: {
     id: string;
     name: string;
@@ -16,7 +21,13 @@ interface StartUpItem {
   };
 }
 
-export function StartupCard({ startup }: { startup: StartUpItem }) {
+interface StartupCardProps {
+  startup: StartUpItem;
+  onEdit?: (startup: StartUpItem) => void;
+  onDelete?: (id: string) => void;
+}
+
+export function StartupCard({ startup, onEdit, onDelete }: StartupCardProps) {
   const getInitials = (name: string) => {
     return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'S';
   };
@@ -24,7 +35,7 @@ export function StartupCard({ startup }: { startup: StartUpItem }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition relative flex flex-col justify-between">
       {/* Logo Banner Area */}
-      <div className="h-32 bg-slate-50 border-b border-slate-50 flex items-center justify-center p-4">
+      <div className="h-32 bg-slate-50 border-b border-slate-50 flex items-center justify-center p-4 relative">
         {startup.logoUrl ? (
           <img 
             src={startup.logoUrl} 
@@ -34,6 +45,34 @@ export function StartupCard({ startup }: { startup: StartUpItem }) {
         ) : (
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#003D7A] to-[#C41E3A] flex items-center justify-center text-white font-black text-xl">
             {getInitials(startup.name)}
+          </div>
+        )}
+
+        {/* Owner controls overlay */}
+        {startup.postedByMe && (
+          <div className="absolute top-2 right-2 flex gap-1.5">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(startup)}
+                title="Edit startup"
+                className="p-1.5 bg-white/90 hover:bg-white text-slate-600 hover:text-[#003D7A] rounded-lg shadow-sm border border-slate-200 transition"
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => {
+                  if (confirm(`Delete "${startup.name}"? This cannot be undone.`)) {
+                    onDelete(startup.id);
+                  }
+                }}
+                title="Delete startup"
+                className="p-1.5 bg-white/90 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-lg shadow-sm border border-slate-200 hover:border-rose-200 transition"
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -84,7 +123,7 @@ export function StartupCard({ startup }: { startup: StartUpItem }) {
           </div>
           <div>
             <p className="font-bold text-gray-800 leading-tight">
-              {startup.founder?.name}
+              {startup.postedByMe ? 'You' : startup.founder?.name}
             </p>
             <p className="text-[9px] text-slate-400 font-semibold mt-0.5 leading-none">
               {startup.founder?.currentRole || 'Alumnus'}
