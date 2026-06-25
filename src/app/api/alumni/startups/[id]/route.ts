@@ -1,3 +1,5 @@
+// src/app/api/alumni/startups/[id]/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
@@ -7,16 +9,18 @@ import { startupSchema } from '@/schemas/startup';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ← now a Promise
 ) {
   try {
+    const { id } = await params;  // ← await it
+
     const alumni = await getCurrentAlumni();
     if (!alumni) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const startup = await prisma.startUp.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { founderId: true },
     });
 
@@ -45,7 +49,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.startUp.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: validated.data.name,
         description: validated.data.description,
@@ -67,16 +71,18 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ← now a Promise
 ) {
   try {
+    const { id } = await params;  // ← await it
+
     const alumni = await getCurrentAlumni();
     if (!alumni) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const startup = await prisma.startUp.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { founderId: true },
     });
 
@@ -88,7 +94,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    await prisma.startUp.delete({ where: { id: params.id } });
+    await prisma.startUp.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
