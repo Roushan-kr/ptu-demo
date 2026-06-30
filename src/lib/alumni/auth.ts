@@ -26,6 +26,7 @@ async function completeOAuthInviteRegistration(
     isRegistered: true,
     registeredAt: new Date(),
     lastLoginAt: new Date(),
+    inviteToken: null, //Nullify token to invalidate it after OAuth registration
   };
   if (user.image) {
     updateData.avatarUrl = user.image;
@@ -68,7 +69,7 @@ export const alumniAuthConfig: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: { params: { scope: 'openid email profile' } },
     }),
-    // ✅ Custom LinkedIn Provider (OpenID Connect)
+    //Custom LinkedIn Provider (OpenID Connect)
     {
       id: 'linkedin',
       name: 'LinkedIn',

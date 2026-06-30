@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
+import { getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 import { Prisma } from '@prisma/client';
 
 interface JobMetadata {
@@ -14,10 +14,13 @@ interface JobMetadata {
 
 export async function GET(req: NextRequest) {
   try {
-    const alumni = await getCurrentAlumni();
-    if (!alumni) {
+    const identity = await getCurrentAlumniOrStaff();
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Resolve the alumni id (null for admin viewers)
+    const alumniId = identity.isAdmin ? null : identity.alumni.id;
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
@@ -73,8 +76,8 @@ export async function GET(req: NextRequest) {
         isExpired: job.expireAt ? new Date(job.expireAt) < new Date() : false,
         postedByAlumni: job.postedByAlumni,
         postedByStaff: job.postedByStaff,
-        postedByMe: job.postedByAlumniId === alumni.id,
-        appliedByMe: (meta.applicants || []).includes(alumni.id),
+        postedByMe: alumniId ? job.postedByAlumniId === alumniId : false,
+        appliedByMe: alumniId ? (meta.applicants || []).includes(alumniId) : false,
       };
     });
 

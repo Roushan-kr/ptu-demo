@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
+import { getCurrentAlumni, getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 import { getAuthenticatedStaff } from '@/lib/auth/staff-auth';
 import { eventSchema, type EventSchemaType } from '@/schemas/event';
 import { Prisma, RsvpStatus } from '@prisma/client';
@@ -116,22 +116,25 @@ export async function getEventsAction(params: EventFilterParams): Promise<{
   events: EventItemType[];
   pagination: { page: number; limit: number; totalCount: number; totalPages: number };
 }> {
-  const alumni = await getCurrentAlumni();
-  if (!alumni) throw new Error('Unauthorized');
+  const identity = await getCurrentAlumniOrStaff();
+  if (!identity) throw new Error('Unauthorized');
+
+  // alumniId is null when a staff/admin is the viewer
+  const alumniId = identity.isAdmin ? null : identity.alumni.id;
 
   const { tab = 'all', page = 1, limit = 12, showDrafts = false } = params;
 
   // Base: only published, unless we show own drafts
   let base: Prisma.EventWhereInput;
-  if (tab === 'posted') {
+  if (alumniId && tab === 'posted') {
     // My own posts (including drafts when showDrafts=true)
     base = showDrafts
-      ? { postedByAlumniId: alumni.id }
-      : { postedByAlumniId: alumni.id, isPublished: true };
-  } else if (tab === 'attended') {
-    base = { rsvps: { some: { alumniId: alumni.id } } };
+      ? { postedByAlumniId: alumniId }
+      : { postedByAlumniId: alumniId, isPublished: true };
+  } else if (alumniId && tab === 'attended') {
+    base = { rsvps: { some: { alumniId } } };
   } else {
-    // "all" — published only
+    // "all" or admin viewer — published only
     base = { isPublished: true };
   }
 
@@ -154,10 +157,10 @@ export async function getEventsAction(params: EventFilterParams): Promise<{
 
   const events = await Promise.all(
     rawEvents.map(async (e) => {
-      const withStats = await addRsvpStats(e, alumni.id);
+      const withStats = await addRsvpStats(e, alumniId ?? undefined);
       return {
         ...withStats,
-        postedByMe: e.postedByAlumniId === alumni.id,
+        postedByMe: alumniId ? e.postedByAlumniId === alumniId : false,
       } as unknown as EventItemType;
     }),
   );

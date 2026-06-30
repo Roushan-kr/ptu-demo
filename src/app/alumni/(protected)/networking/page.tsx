@@ -1,225 +1,302 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, Briefcase, MapPin,  Globe, Search, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import { Search, User, MapPin, Briefcase, GraduationCap, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
 
-interface Alumni {
-  id: number;
-  name: string;
-  batch: string;
-  role: string;
-  company: string;
-  location: string;
-  branch: string;
-  bio: string;
-  image: string;
-  linkedin?: string;
-  skills: string[];
+// Inline LinkedIn icon (not in older lucide-react builds)
+function LinkedinIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+      <rect x="2" y="9" width="4" height="12"/>
+      <circle cx="4" cy="4" r="2"/>
+    </svg>
+  );
 }
 
-const alumni: Alumni[] = [
-  {
-    id: 1,
-    name: 'Rajesh Kumar',
-    batch: '2015',
-    role: 'CTO & Co-founder',
-    company: 'TechCorp India',
-    location: 'Bangalore',
-    branch: 'Computer Science',
-    bio: 'Built a team of 50+ engineers. Passionate about cloud architecture and mentoring startup founders.',
-    image: '👨‍💼',
-    linkedin: 'rajesh-kumar',
-    skills: ['Cloud Architecture', 'Team Leadership', 'Mentoring', 'AWS', 'System Design']
-  },
-  {
-    id: 2,
-    name: 'Priya Singh',
-    batch: '2018',
-    role: 'Founder & CEO',
-    company: 'AI Innovations Inc',
-    location: 'Singapore',
-    branch: 'Electronics & Communication',
-    bio: 'Building AI solutions for enterprises. Raised 50M+ in funding. Women entrepreneur of the year.',
-    image: '👩‍💼',
-    linkedin: 'priya-singh',
-    skills: ['AI/ML', 'Entrepreneurship', 'Business Strategy', 'Fundraising', 'Product Development']
-  },
-  {
-    id: 3,
-    name: 'Amit Patel',
-    batch: '2016',
-    role: 'VP Engineering',
-    company: 'Fortune 500 MNC',
-    location: 'New York',
-    branch: 'Mechanical Engineering',
-    bio: 'Patent holder in cloud technologies. Leading product innovation for a Fortune 500 company.',
-    image: '👨‍🔬',
-    linkedin: 'amit-patel',
-    skills: ['Product Engineering', 'Patents', 'Innovation', 'Global Teams', 'R&D']
-  },
-  {
-    id: 4,
-    name: 'Sarah Khan',
-    batch: '2019',
-    role: 'UX/UI Designer',
-    company: 'Design Studio',
-    location: 'Gurgaon',
-    branch: 'Information Technology',
-    bio: 'Award-winning designer. Passionate about creating user-centric solutions and mentoring junior designers.',
-    image: '👩‍🎨',
-    linkedin: 'sarah-khan',
-    skills: ['UI/UX Design', 'Figma', 'User Research', 'Design Thinking', 'Frontend']
-  },
-  {
-    id: 5,
-    name: 'Vikram Singh',
-    batch: '2017',
-    role: 'Sales Director',
-    company: 'Enterprise Solutions Ltd',
-    location: 'Delhi',
-    branch: 'Computer Science',
-    bio: 'Built B2B sales team from scratch. Exceeded targets by 150% for 3 consecutive years.',
-    image: '👨‍💼',
-    linkedin: 'vikram-singh',
-    skills: ['B2B Sales', 'Team Building', 'Strategic Partnerships', 'Enterprise Sales', 'Leadership']
-  },
-  {
-    id: 6,
-    name: 'Ananya Sharma',
-    batch: '2020',
-    role: 'Junior Software Engineer',
-    company: 'CloudTech',
-    location: 'Remote',
-    branch: 'Computer Science',
-    bio: 'Recent graduate building DevOps solutions. Active in open-source community.',
-    image: '👩‍💻',
-    linkedin: 'ananya-sharma',
-    skills: ['Docker', 'Kubernetes', 'AWS', 'CI/CD', 'Python']
-  },
-];
+interface DirectoryAlumni {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  currentRole?: string;
+  currentCompany?: string;
+  city?: string;
+  branch: string;
+  batchYear: number;
+  college: string;
+  course?: string;
+  linkedinUrl?: string;
+}
 
-const branches = ['All', 'Computer Science', 'Electronics & Communication', 'Mechanical Engineering', 'Information Technology'];
+const BRANCHES = ['All', 'Computer Science', 'Information Technology', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Electrical Engineering', 'Chemical Engineering'];
+
+function getInitials(name: string) {
+  return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'AL';
+}
 
 export default function NetworkingPage() {
-  const [selectedBranch, setSelectedBranch] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [alumni, setAlumni] = useState<DirectoryAlumni[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
+  const [branch, setBranch] = useState('All');
+  const [showFilters, setShowFilters] = useState(false);
+  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filteredAlumni = alumni.filter(person => {
-    const matchBranch = selectedBranch === 'All' || person.branch === selectedBranch;
-    const matchSearch =
-      person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchBranch && matchSearch;
-  });
+  const fetchDirectory = useCallback(async (searchVal: string, branchVal: string, pageVal: number) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(pageVal),
+        limit: '12',
+        search: searchVal,
+        branch: branchVal,
+      });
+      const res = await fetch(`/api/alumni/directory?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAlumni(data.alumni || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchRef.current) clearTimeout(searchRef.current);
+    searchRef.current = setTimeout(() => {
+      setPage(1);
+      fetchDirectory(search, branch, 1);
+    }, 350);
+  }, [search, branch, fetchDirectory]);
+
+  // Paginate
+  useEffect(() => {
+    fetchDirectory(search, branch, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#0057B8] to-[#003D7A] text-white rounded-2xl p-8 shadow-lg">
-        <h1 className="text-4xl font-bold mb-3">Alumni Network</h1>
-        <p className="text-blue-100 text-lg">Connect with successful alumni across industries and locations worldwide</p>
+      <div className="bg-gradient-to-r from-[#003D7A] to-[#0057B8] text-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_70%_50%,white,transparent_70%)]" />
+        <div className="relative">
+          <p className="text-blue-200 text-xs font-bold tracking-widest uppercase mb-2">Alumni Network</p>
+          <h1 className="text-3xl md:text-4xl font-black mb-2">Connect with Alumni</h1>
+          <p className="text-blue-100 text-sm max-w-lg">
+            Browse through {total > 0 ? `${total}+` : ''} registered alumni across batches and branches. View profiles, connect on LinkedIn, and grow your network.
+          </p>
+        </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <div className="flex gap-4 mb-6 flex-col md:flex-row">
+      {/* Search + Filter Bar */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <div className="flex gap-3 mb-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-3 text-gray-400" size={20} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Search by name, role, company, or skills..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[#003D7A] transition"
+              placeholder="Search by name, role, company, or city..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] focus:ring-1 focus:ring-[#003D7A]/20 text-sm transition"
             />
           </div>
-          <button className="flex items-center gap-2 px-6 py-2.5 border-2 border-[#003D7A] text-[#003D7A] rounded-lg hover:bg-[#003D7A] hover:text-white transition font-semibold">
-            <Filter size={20} /> Filter
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm transition ${showFilters ? 'bg-[#003D7A] text-white border-[#003D7A]' : 'border-slate-200 text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A]'}`}
+          >
+            <SlidersHorizontal size={16} />
+            <span className="hidden sm:inline">Filter</span>
           </button>
         </div>
 
-        {/* Branch filter */}
-        <div className="flex gap-2 flex-wrap">
-          {branches.map(branch => (
-            <button
-              key={branch}
-              onClick={() => setSelectedBranch(branch)}
-              className={`px-4 py-2 rounded-full font-semibold transition text-sm ${
-                selectedBranch === branch
-                  ? 'bg-gradient-to-r from-[#0057B8] to-[#003D7A] text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {branch}
-            </button>
-          ))}
-        </div>
+        {/* Branch Filters */}
+        {showFilters && (
+          <div className="flex gap-2 flex-wrap pt-2 border-t border-slate-100">
+            {BRANCHES.map(b => (
+              <button
+                key={b}
+                onClick={() => { setBranch(b); setPage(1); }}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${branch === b
+                  ? 'bg-gradient-to-r from-[#003D7A] to-[#0057B8] text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Active filters badge */}
+        {(search || branch !== 'All') && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+            <span className="text-xs text-slate-500 font-medium">Active filters:</span>
+            {search && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-[#003D7A] rounded-full text-xs font-semibold">
+                "{search}"
+                <button onClick={() => setSearch('')}><X size={10} /></button>
+              </span>
+            )}
+            {branch !== 'All' && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-[#003D7A] rounded-full text-xs font-semibold">
+                {branch}
+                <button onClick={() => setBranch('All')}><X size={10} /></button>
+              </span>
+            )}
+            <span className="ml-auto text-xs text-slate-400">{total} result{total !== 1 ? 's' : ''}</span>
+          </div>
+        )}
       </div>
 
       {/* Alumni Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAlumni.length > 0 ? (
-          filteredAlumni.map(person => (
-            <div key={person.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-[#0057B8]">
-              {/* Header with image/emoji */}
-              <div className="bg-gradient-to-r from-[#0057B8]/10 to-[#003D7A]/10 p-8 text-center">
-                <p className="text-6xl mb-3">{person.image}</p>
-                <p className="text-xs font-semibold text-[#C41E3A] uppercase tracking-wide">Batch {person.batch}</p>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-1">{person.name}</h3>
-                <p className="text-sm text-[#003D7A] font-semibold mb-0.5">{person.role}</p>
-                <p className="text-sm text-gray-600 mb-3">{person.company}</p>
-
-                <div className="flex items-center gap-1 text-sm text-gray-600 mb-4">
-                  <MapPin size={16} />
-                  {person.location}
+      {loading ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-100 p-6 animate-pulse">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-16 h-16 rounded-full bg-slate-200 flex-shrink-0" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="h-4 bg-slate-200 rounded w-3/4" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
+                  <div className="h-3 bg-slate-100 rounded w-2/3" />
                 </div>
+              </div>
+              <div className="h-3 bg-slate-100 rounded mb-2" />
+              <div className="h-8 bg-slate-100 rounded mt-4" />
+            </div>
+          ))}
+        </div>
+      ) : alumni.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users size={28} className="text-slate-400" />
+          </div>
+          <p className="text-lg font-bold text-slate-700 mb-1">No alumni found</p>
+          <p className="text-sm text-slate-500">Try adjusting your search or filters</p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {alumni.map(person => (
+            <div
+              key={person.id}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group"
+            >
+              {/* Card Top Bar */}
+              <div className="h-1.5 bg-gradient-to-r from-[#003D7A] to-[#C41E3A]" />
 
-                <p className="text-sm text-gray-700 mb-4 line-clamp-3">{person.bio}</p>
-
-                <div className="mb-4">
-                  <p className="text-xs font-semibold text-gray-600 mb-2">Skills</p>
-                  <div className="flex flex-wrap gap-1">
-                    {person.skills.slice(0, 3).map(skill => (
-                      <span key={skill} className="px-2 py-1 bg-[#0057B8]/10 text-[#0057B8] rounded text-xs font-semibold">
-                        {skill}
-                      </span>
-                    ))}
-                    {person.skills.length > 3 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-semibold">
-                        +{person.skills.length - 3}
-                      </span>
+              <div className="p-6">
+                {/* Avatar + Name */}
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#003D7A]/10 to-[#C41E3A]/10 border-2 border-white shadow-md flex items-center justify-center text-[#003D7A] font-extrabold text-lg overflow-hidden flex-shrink-0">
+                    {person.avatarUrl ? (
+                      <img src={person.avatarUrl} alt={person.name} className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(person.name)
                     )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-gray-900 truncate">{person.name}</h3>
+                    <p className="text-xs text-[#003D7A] font-semibold truncate">
+                      {person.currentRole || 'Alumni'}
+                      {person.currentCompany ? ` · ${person.currentCompany}` : ''}
+                    </p>
+                    <div className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
+                      <GraduationCap size={11} />
+                      <span>{person.branch} · Batch {person.batchYear}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t border-gray-200">
-                  <button className="flex-1 flex items-center justify-center gap-2 py-2 border-2 border-[#003D7A] text-[#003D7A] rounded-lg hover:bg-[#003D7A] hover:text-white transition font-semibold text-sm">
-                    <span>💬</span> Message
-                  </button>
-                  {person.linkedin && (
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#0A66C2] text-white rounded-lg hover:bg-[#084398] transition font-semibold text-sm">
-                      <Users size={16} /> LinkedIn
+                {/* Location + College */}
+                <div className="space-y-1.5 mb-4">
+                  {person.city && (
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <MapPin size={12} className="text-[#C41E3A] flex-shrink-0" />
+                      <span className="truncate">{person.city}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Briefcase size={12} className="text-[#003D7A] flex-shrink-0" />
+                    <span className="truncate">{person.course || 'B.Tech'} · {person.college}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-3 border-t border-slate-100">
+                  <Link
+                    href={`/alumni/profile/${person.id}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-[#003D7A] text-[#003D7A] text-xs font-bold rounded-lg hover:bg-[#003D7A] hover:text-white transition"
+                  >
+                    <User size={13} />
+                    View Profile
+                  </Link>
+                  {person.linkedinUrl ? (
+                    <a
+                      href={person.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-[#0A66C2] text-white text-xs font-bold rounded-lg hover:bg-[#084398] transition"
+                    >
+                      <LinkedinIcon size={13} />
+                      LinkedIn
+                    </a>
+                  ) : (
+                    <button
+                      disabled
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg cursor-not-allowed"
+                    >
+                      <LinkedinIcon size={13} />
+                      LinkedIn
                     </button>
                   )}
                 </div>
               </div>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-16 bg-gray-50 rounded-2xl">
-            <p className="text-gray-600 text-lg">No alumni found matching your criteria.</p>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Spacer for bottom nav */}
-      <div className="h-20"></div>
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A] transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={16} />
+            Previous
+          </button>
+          <span className="text-sm text-slate-500 font-medium">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:border-[#003D7A] hover:text-[#003D7A] transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
+  );
+}
+
+// For the empty state icon usage
+function Users({ size, className }: { size: number; className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
   );
 }

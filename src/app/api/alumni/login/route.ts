@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateAlumniAccessToken, generateAlumniRefreshToken } from '@/lib/auth/alumni-jwt';
 import bcrypt from 'bcryptjs';
+import { loginLimiter } from '@/lib/rate-limit';
 
 function parseExpiryToMs(expiry: string): number {
   const value = parseInt(expiry);
@@ -14,6 +15,12 @@ function parseExpiryToMs(expiry: string): number {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const { success } = loginLimiter.check(ip);
+    if (!success) {
+      return NextResponse.json({ error: 'Too many login attempts. Please try again in a minute.' }, { status: 429 });
+    }
+
     const body = await req.json();
     const { email, password } = body;
 

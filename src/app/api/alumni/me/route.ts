@@ -17,18 +17,19 @@ export async function GET(req: NextRequest) {
     let viewerId: string | null = null;
     let isStaff = false;
 
-    if (alumniToken) {
-      try {
-        const payload = verifyAlumniAccessToken(alumniToken);
-        viewerId = payload.id;
-      } catch {}
-    }
-
-    if (!viewerId && staffToken) {
+    // Check staff token first to avoid mixing staff sessions with alumni profiles
+    if (staffToken) {
       try {
         const payload = verifyAccessToken(staffToken);
         viewerId = payload.id;
         isStaff = true;
+      } catch {}
+    }
+
+    if (!viewerId && alumniToken) {
+      try {
+        const payload = verifyAlumniAccessToken(alumniToken);
+        viewerId = payload.id;
       } catch {}
     }
 
@@ -37,11 +38,40 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const targetId = searchParams.get('id') || viewerId;
-    const isSelf = !isStaff && (targetId === viewerId);
+    const targetId = searchParams.get('id');
+
+    // If targetId is not specified, and the viewer is staff, return staff details
+    if (!targetId && isStaff) {
+      const staff = await prisma.staff.findUnique({
+        where: { id: viewerId },
+        include: { campus: { select: { id: true, name: true } } },
+      });
+
+      if (!staff) {
+        return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        user: {
+          id: staff.id,
+          name: staff.name,
+          email: staff.email,
+          isAdmin: true,
+          role: staff.role,
+          college: staff.campus?.name || 'All Campuses (Consolidated)',
+          currentRole: staff.role,
+        },
+        isSelf: false,
+        isAdmin: true,
+      });
+    }
+
+    // Resolve targetId: defaults to viewerId for alumni self-lookup
+    const activeTargetId = targetId || viewerId;
+    const isSelf = !isStaff && (activeTargetId === viewerId);
 
     const alumni = await prisma.alumni.findUnique({
-      where: { id: targetId },
+      where: { id: activeTargetId },
       include: {
         education: {
           orderBy: { startDate: 'desc' },
@@ -57,78 +87,7 @@ export async function GET(req: NextRequest) {
 
     if (!alumni) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    let updatedAlumni = alumni;
-    const currentExperiences = alumni.workExperience.filter(exp => exp.isCurrent);
-
-    if (currentExperiences.length > 0) {
-      // Find the latest current experience (sort by startDate desc, then createdAt desc)
-      const latestCurrent = [...currentExperiences].sort((a, b) => {
-        const dateA = new Date(a.startDate).getTime();
-        const dateB = new Date(b.startDate).getTime();
-        if (dateA !== dateB) return dateB - dateA;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      })[0];
-
-      // Check if out of sync
-      if (
-        alumni.currentRole !== latestCurrent.title ||
-        alumni.currentCompany !== latestCurrent.company ||
-        alumni.city !== latestCurrent.location
-      ) {
-        const updated = await prisma.alumni.update({
-          where: { id: alumni.id },
-          data: {
-            currentRole: latestCurrent.title,
-            currentCompany: latestCurrent.company,
-            city: latestCurrent.location || alumni.city,
-          },
-          include: {
-            education: {
-              orderBy: { startDate: 'desc' },
-            },
-            workExperience: {
-              orderBy: { startDate: 'desc' },
-            },
-            campus: {
-              select: { id: true, name: true },
-            },
-          },
-        });
-        updatedAlumni = updated;
-      }
-    } else if (alumni.currentRole || alumni.currentCompany) {
-      // No current experience, but professional details exist in Alumni. Create a WorkExperience record.
-      await prisma.workExperience.create({
-        data: {
-          alumniId: alumni.id,
-          company: alumni.currentCompany || 'Not Specified',
-          title: alumni.currentRole || 'Not Specified',
-          location: alumni.city || null,
-          startDate: alumni.registeredAt || alumni.createdAt || new Date(),
-          isCurrent: true,
-        }
-      });
-      // Refetch
-      const refetched = await prisma.alumni.findUnique({
-        where: { id: targetId },
-        include: {
-          education: {
-            orderBy: { startDate: 'desc' },
-          },
-          workExperience: {
-            orderBy: { startDate: 'desc' },
-          },
-          campus: {
-            select: { id: true, name: true },
-          },
-        },
-      });
-      if (refetched) {
-        updatedAlumni = refetched;
-      }
-    }
-
-    return NextResponse.json({ user: updatedAlumni, isSelf });
+    return NextResponse.json({ user: alumni, isSelf, isAdmin: isStaff });
   } catch (error) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }

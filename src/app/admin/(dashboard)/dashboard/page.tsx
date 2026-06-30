@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { 
   Users, UserCheck, Mail, Clock, CalendarDays, CheckSquare, 
-  GraduationCap, Building, RefreshCw, ChevronDown, CheckCircle
+  GraduationCap, Building, RefreshCw, ChevronDown, CheckCircle, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -48,62 +51,39 @@ interface DashboardData {
   };
 }
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  campus: { id: string; name: string } | null;
-}
-
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([]);
+  const { user: userData } = useAdminAuth();
   const [selectedCampusId, setSelectedCampusId] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  // Fetch logged-in user profile & campuses list (if admin)
-  useEffect(() => {
-    fetch('/api/admin/me')
-      .then((res) => res.json())
-      .then((d) => {
-        if (d?.user) {
-          setUserData(d.user);
-        }
-      })
-      .catch(() => {});
+  // Fetch campuses list using React Query
+  const { data: campuses = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ['campuses'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/campuses');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 60 * 60 * 1000, // cache for 1 hour
+  });
 
-    fetch('/api/admin/campuses')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((c) => setCampuses(Array.isArray(c) ? c : []))
-      .catch(() => {});
-  }, []);
-
-  // Fetch dashboard summary stats
-  const fetchDashboardData = useCallback(async (campusIdFilter?: string) => {
-    setRefreshing(true);
-    try {
-      const url = campusIdFilter 
-        ? `/api/admin/dashboard?campusId=${encodeURIComponent(campusIdFilter)}`
+  // Fetch dashboard summary stats using React Query
+  const { 
+    data, 
+    isLoading: loading, 
+    isFetching: refreshing, 
+    refetch: fetchDashboardData 
+  } = useQuery<DashboardData | null>({
+    queryKey: ['admin-dashboard-stats', selectedCampusId],
+    queryFn: async () => {
+      const url = selectedCampusId 
+        ? `/api/admin/dashboard?campusId=${encodeURIComponent(selectedCampusId)}`
         : '/api/admin/dashboard';
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to load dashboard metrics');
-      const payload = await res.json();
-      setData(payload);
-    } catch (err) {
-      toast.error('Could not refresh dashboard statistics');
-      console.error(err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchDashboardData(selectedCampusId);
-  }, [selectedCampusId, fetchDashboardData]);
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000, // Keep dashboard data fresh/cached for 5 minutes
+  });
 
   const handleCampusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCampusId(e.target.value);
@@ -175,8 +155,19 @@ export default function DashboardPage() {
             Live Updates Active
           </div>
 
+          {/* Enter Alumni Portal Button */}
+          <Link
+            href="/alumni/feed"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#012140] to-[#1a4ea3] hover:from-[#0f2e75] hover:to-[#2558c4] text-white text-xs font-bold rounded-2xl transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <ExternalLink size={14} />
+            Enter Alumni Portal
+          </Link>
+
           <button 
-            onClick={() => fetchDashboardData(selectedCampusId)}
+            onClick={() => fetchDashboardData()}
             className="p-2 border border-slate-200 hover:bg-slate-50 rounded-2xl text-slate-600 transition"
             title="Refresh Data"
             disabled={refreshing}

@@ -128,30 +128,39 @@ export async function processImportBatch(
 
   // 3. Bulk upsert in chunks for scalability
   if (validRecords.length) {
-    for (let i = 0; i < validRecords.length; i += UPSERT_CHUNK_SIZE) {
-      const chunk = validRecords.slice(i, i + UPSERT_CHUNK_SIZE);
-      await prisma.$transaction(
-        chunk.map((record) =>
-          prisma.alumni.upsert({
-            where: { email: record.email },
-            update: {
-              name: record.name,
-              batchYear: record.batchYear,
-              branch: record.branch,
-              college: record.college,
-              course: record.course,
-              enrollmentNo: record.enrollmentNo,
-              phone: record.phone,
-              batchId: batch.id,
-              importedById: adminId,
-              // Preserve originalInvitedEmail if already set, don't override on update
-            } as any,
-            create: record as any,
-          })
-        )
-      );
+    try {
+      for (let i = 0; i < validRecords.length; i += UPSERT_CHUNK_SIZE) {
+        const chunk = validRecords.slice(i, i + UPSERT_CHUNK_SIZE);
+        await prisma.$transaction(
+          chunk.map((record) =>
+            prisma.alumni.upsert({
+              where: { email: record.email },
+              update: {
+                name: record.name,
+                batchYear: record.batchYear,
+                branch: record.branch,
+                college: record.college,
+                course: record.course,
+                enrollmentNo: record.enrollmentNo,
+                phone: record.phone,
+                batchId: batch.id,
+                importedById: adminId,
+              } as any,
+              create: record as any,
+            })
+          )
+        );
+      }
+      result.success = validRecords.length;
+    } catch (err) {
+      await prisma.invitationBatch.update({
+        where: { id: batch.id },
+        data: {
+          status: 'FAILED' as any,
+        },
+      });
+      throw err;
     }
-    result.success = validRecords.length;
   }
 
   // 4. Update batch status

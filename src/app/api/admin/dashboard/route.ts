@@ -57,18 +57,23 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // Perform concurrent count queries
-    const [
-      totalAlumni,
-      registeredAlumni,
-      pendingInvites,
-      invitedAlumni,
-      pendingRequests,
-      totalEvents,
-      totalRsvps,
-      branchRows,
-      companyRows,
-    ] = await Promise.all([
+    // Today's stats boundaries
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    // Trend queries boundaries: last 7 days
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }).reverse();
+
+    // Trend queries: last 7 days start date
+    const trendStart = last7Days[0];
+
+    // Batch all queries using $transaction
+    const batchQueries = [
       prisma.alumni.count({ where }),
       prisma.alumni.count({ where: { ...where, isRegistered: true } }),
       prisma.alumni.count({
@@ -95,86 +100,54 @@ export async function GET(req: NextRequest) {
         select: { currentCompany: true },
         distinct: ['currentCompany'],
       }),
-    ]);
+      prisma.registrationRequest.count({
+        where: { ...where, createdAt: { gte: startOfToday } },
+      }),
+      prisma.alumni.count({
+        where: { ...where, isRegistered: true, registeredAt: { gte: startOfToday } },
+      }),
+      prisma.event.count({
+        where: { ...eventWhere, createdAt: { gte: startOfToday } },
+      }),
+      prisma.rsvp.count({
+        where: { event: eventWhere, respondedAt: { gte: startOfToday } },
+      }),
+      prisma.alumni.findMany({
+        where: {
+          ...where,
+          isRegistered: true,
+          registeredAt: { gte: trendStart },
+        },
+        select: { registeredAt: true },
+      }),
+      prisma.alumni.groupBy({
+        by: ['branch'],
+        where,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+      prisma.alumni.groupBy({
+        by: ['currentCompany'],
+        where: {
+          ...where,
+          currentCompany: { not: null, notIn: [''] },
+        },
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 5,
+      }),
+    ];
 
-    const uniqueBranchesCount = branchRows.filter((b) => b.branch).length;
-    const uniqueCompaniesCount = companyRows.filter((c) => c.currentCompany).length;
-
-    // Today's stats queries
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const [requestsToday, registrationsToday, eventsToday, rsvpsToday] =
-      await Promise.all([
-        prisma.registrationRequest.count({
-          where: { ...where, createdAt: { gte: startOfToday } },
-        }),
-        prisma.alumni.count({
-          where: { ...where, isRegistered: true, registeredAt: { gte: startOfToday } },
-        }),
-        prisma.event.count({
-          where: { ...eventWhere, createdAt: { gte: startOfToday } },
-        }),
-        prisma.rsvp.count({
-          where: { event: eventWhere, respondedAt: { gte: startOfToday } },
-        }),
-      ]);
-
-    // Trend queries: last 7 days
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }).reverse();
-
-    const registrationTrend = await Promise.all(
-      last7Days.map(async (day) => {
-        const nextDay = new Date(day);
-        nextDay.setDate(nextDay.getDate() + 1);
-        const count = await prisma.alumni.count({
-          where: {
-            ...where,
-            isRegistered: true,
-            registeredAt: {
-              gte: day,
-              lt: nextDay,
-            },
-          },
-        });
-        return {
-          date: day.toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-          }),
-          count,
-        };
-      })
-    );
-
-    // Distribution metrics (Donut Chart)
-    let distribution: { name: string; count: number }[] = [];
-    let distributionType = 'course';
-
+    let distributionPromise;
     if (!scopedCampusId) {
-      // ADMIN global: distribution by campus
-      const campusGroup = await prisma.alumni.groupBy({
+      distributionPromise = prisma.alumni.groupBy({
         by: ['campusId'],
         where,
         _count: { id: true },
       });
-      const campuses = await prisma.campus.findMany({
-        select: { id: true, name: true },
-      });
-      const campusMap = new Map(campuses.map((c) => [c.id, c.name]));
-      distribution = campusGroup.map((cg) => ({
-        name: cg.campusId ? campusMap.get(cg.campusId) || 'Unknown' : 'Unassigned',
-        count: cg._count.id,
-      }));
-      distributionType = 'campus';
     } else {
-      // SUB_ADMIN: distribution by course
-      const courseGroup = await prisma.alumni.groupBy({
+      distributionPromise = prisma.alumni.groupBy({
         by: ['course'],
         where: {
           ...where,
@@ -184,7 +157,72 @@ export async function GET(req: NextRequest) {
         orderBy: { _count: { id: 'desc' } },
         take: 5,
       });
-      distribution = courseGroup.map((cg) => ({
+    }
+
+    const results = await prisma.$transaction([
+      ...batchQueries,
+      distributionPromise,
+      ...(scopedCampusId ? [] : [prisma.campus.findMany({ select: { id: true, name: true } })]),
+    ]);
+
+    const totalAlumni = results[0] as number;
+    const registeredAlumni = results[1] as number;
+    const pendingInvites = results[2] as number;
+    const invitedAlumni = results[3] as number;
+    const pendingRequests = results[4] as number;
+    const totalEvents = results[5] as number;
+    const totalRsvps = results[6] as number;
+    const branchRows = results[7] as any[];
+    const companyRows = results[8] as any[];
+    const requestsToday = results[9] as number;
+    const registrationsToday = results[10] as number;
+    const eventsToday = results[11] as number;
+    const rsvpsToday = results[12] as number;
+    const trendAlumni = results[13] as any[];
+    const topBranchesGroup = results[14] as any[];
+    const topCompaniesGroup = results[15] as any[];
+    const distributionGroup = results[16] as any[];
+
+    const uniqueBranchesCount = branchRows.filter((b) => b.branch).length;
+    const uniqueCompaniesCount = companyRows.filter((c) => c.currentCompany).length;
+
+    // Process trend data in-memory
+    const trendMap = new Map<string, number>();
+    trendAlumni.forEach((al) => {
+      if (al.registeredAt) {
+        const dateKey = al.registeredAt.toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        });
+        trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + 1);
+      }
+    });
+
+    const registrationTrend = last7Days.map((day) => {
+      const dateKey = day.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      });
+      return {
+        date: dateKey,
+        count: trendMap.get(dateKey) || 0,
+      };
+    });
+
+    // Distribution metrics (Donut Chart)
+    let distribution: { name: string; count: number }[] = [];
+    let distributionType = 'course';
+
+    if (!scopedCampusId) {
+      const campuses = results[17] as any[];
+      const campusMap = new Map(campuses.map((c) => [c.id, c.name]));
+      distribution = distributionGroup.map((cg) => ({
+        name: cg.campusId ? campusMap.get(cg.campusId) || 'Unknown' : 'Unassigned',
+        count: cg._count.id,
+      }));
+      distributionType = 'campus';
+    } else {
+      distribution = distributionGroup.map((cg) => ({
         name: cg.course || 'Unknown',
         count: cg._count.id,
       }));
@@ -192,29 +230,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Top Branches (Bar Chart)
-    const topBranchesGroup = await prisma.alumni.groupBy({
-      by: ['branch'],
-      where,
-      _count: { id: true },
-      orderBy: { _count: { id: 'desc' } },
-      take: 5,
-    });
     const branchDistribution = topBranchesGroup.map((b) => ({
       name: b.branch,
       count: b._count.id,
     }));
 
     // Top Companies (Bar Chart)
-    const topCompaniesGroup = await prisma.alumni.groupBy({
-      by: ['currentCompany'],
-      where: {
-        ...where,
-        currentCompany: { not: null, notIn: [''] },
-      },
-      _count: { id: true },
-      orderBy: { _count: { id: 'desc' } },
-      take: 5,
-    });
     const companyDistribution = topCompaniesGroup.map((c) => ({
       name: c.currentCompany || 'Unknown',
       count: c._count.id,

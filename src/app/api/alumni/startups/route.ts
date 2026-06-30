@@ -13,6 +13,17 @@ async function tryGetCurrentAlumni() {
   }
 }
 
+// In-memory cache for filter options to prevent full table DISTINCT scans on every pagination/search
+interface FiltersCache {
+  industries: string[];
+  locations: string[];
+  designations: string[];
+  fetchedAt: number;
+}
+
+let filtersCache: FiltersCache | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export async function GET(req: NextRequest) {
   const currentAlumni = await tryGetCurrentAlumni();
   try {
@@ -55,8 +66,8 @@ export async function GET(req: NextRequest) {
       orderBy = { createdAt: 'desc' };
     }
 
-    // Fetch startups, total count, and unique filter metadata in parallel
-    const [startups, totalCount, distinctIndustries, distinctFounders] = await Promise.all([
+    // Fetch startups and total count
+    const [startups, totalCount] = await Promise.all([
       prisma.startUp.findMany({
         where: whereClause,
         orderBy,
@@ -75,29 +86,50 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.startUp.count({ where: whereClause }),
-      prisma.startUp.findMany({
-        where: { industry: { not: null } },
-        distinct: ['industry'],
-        select: { industry: true },
-      }),
-      prisma.alumni.findMany({
-        where: {
-          startups: { some: {} },
-        },
-        distinct: ['city', 'currentRole'],
-        select: {
-          city: true,
-          currentRole: true,
-        },
-      }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
 
-    // Extract lists of values for filter panels
-    const industriesList = Array.from(new Set(distinctIndustries.map((item) => item.industry).filter(Boolean))) as string[];
-    const locationsList = Array.from(new Set(distinctFounders.map((item) => item.city).filter(Boolean))) as string[];
-    const designationsList = Array.from(new Set(distinctFounders.map((item) => item.currentRole).filter(Boolean))) as string[];
+    // Fetch distinct filter options only if cache is expired/missing
+    let industriesList: string[] = [];
+    let locationsList: string[] = [];
+    let designationsList: string[] = [];
+    const now = Date.now();
+
+    if (filtersCache && now - filtersCache.fetchedAt < CACHE_TTL) {
+      industriesList = filtersCache.industries;
+      locationsList = filtersCache.locations;
+      designationsList = filtersCache.designations;
+    } else {
+      const [distinctIndustries, distinctFounders] = await Promise.all([
+        prisma.startUp.findMany({
+          where: { industry: { not: null } },
+          distinct: ['industry'],
+          select: { industry: true },
+        }),
+        prisma.alumni.findMany({
+          where: {
+            startups: { some: {} },
+          },
+          distinct: ['city', 'currentRole'],
+          select: {
+            city: true,
+            currentRole: true,
+          },
+        }),
+      ]);
+
+      industriesList = Array.from(new Set(distinctIndustries.map((item) => item.industry).filter(Boolean))) as string[];
+      locationsList = Array.from(new Set(distinctFounders.map((item) => item.city).filter(Boolean))) as string[];
+      designationsList = Array.from(new Set(distinctFounders.map((item) => item.currentRole).filter(Boolean))) as string[];
+
+      filtersCache = {
+        industries: industriesList,
+        locations: locationsList,
+        designations: designationsList,
+        fetchedAt: now,
+      };
+    }
 
     // Annotate each startup with postedByMe flag
     const startupsWithMeta = startups.map((s) => ({

@@ -9,7 +9,7 @@ export interface TokenPayload {
 export function generateAccessToken(payload: TokenPayload): string {
   return jwt.sign(
     { id: payload.id, email: payload.email, role: payload.role },
-    process.env.ACCESS_TOKEN_SECRET!,
+    process.env.STAFF_ACCESS_TOKEN_SECRET!,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY as any }
   )
 }
@@ -17,7 +17,7 @@ export function generateAccessToken(payload: TokenPayload): string {
 export function generateRefreshToken(payload: TokenPayload): string {
   return jwt.sign(
     { id: payload.id },
-    process.env.REFRESH_TOKEN_SECRET!,
+    process.env.STAFF_REFRESH_TOKEN_SECRET!,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY as any }
   )
 }
@@ -32,7 +32,7 @@ export function generateOtpToken(payload: TokenPayload): string {
 
 export function verifyAccessToken(token: string): TokenPayload {
   try {
-    return jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!) as TokenPayload
+    return jwt.verify(token, process.env.STAFF_ACCESS_TOKEN_SECRET!) as TokenPayload
   } catch (error) {
     throw new Error('Invalid or expired access token')
   }
@@ -40,7 +40,7 @@ export function verifyAccessToken(token: string): TokenPayload {
 
 export function verifyRefreshToken(token: string): TokenPayload {
   try {
-    return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET!) as TokenPayload
+    return jwt.verify(token, process.env.STAFF_REFRESH_TOKEN_SECRET!) as TokenPayload
   } catch (error) {
     throw new Error('Invalid or expired refresh token')
   }

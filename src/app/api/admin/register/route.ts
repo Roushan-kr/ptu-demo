@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { generateOtpToken } from '@/lib/auth/jwt'
 import { sendAdminOtpEmail } from '@/lib/admin-otp'
+import { registerLimiter } from '@/lib/rate-limit'
 
 // Simple email format validation
 function isValidEmail(email: string): boolean {
@@ -12,6 +13,12 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
+    const { success } = registerLimiter.check(ip)
+    if (!success) {
+      return NextResponse.json({ error: 'Too many registration requests. Please try again in a minute.' }, { status: 429 })
+    }
+
     const { name, email, password } = await req.json()
 
     // 1. Basic validation

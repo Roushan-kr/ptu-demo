@@ -20,6 +20,8 @@ export default async function ProtectedAlumniLayout({
   }
 
   let authorized = false;
+  let isStaff = false;
+
   if (alumniToken) {
     try {
       verifyAlumniAccessToken(alumniToken);
@@ -27,10 +29,13 @@ export default async function ProtectedAlumniLayout({
     } catch {}
   }
 
-  if (!authorized && staffToken) {
+  if (staffToken) {
     try {
       verifyAccessToken(staffToken);
-      authorized = true;
+      isStaff = true;
+      if (!authorized) {
+        authorized = true;
+      }
     } catch {}
   }
 
@@ -60,13 +65,23 @@ export default async function ProtectedAlumniLayout({
             </div>
 
             {/* Center Yearbook Nav Link */}
-            <Link
-              href="/alumni/yearbook"
-              className="group hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#003D7A]/20 bg-[#003D7A]/5 hover:bg-[#003D7A]/10 hover:border-[#003D7A]/40 transition-all duration-200"
-            >
-              <span className="text-lg">📖</span>
-              <span className="text-xs font-bold text-[#003D7A] tracking-wide">Yearbook</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/alumni/yearbook"
+                className="group flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#003D7A]/20 bg-[#003D7A]/5 hover:bg-[#003D7A]/10 hover:border-[#003D7A]/40 transition-all duration-200"
+              >
+                <span className="text-xs font-bold text-[#003D7A] tracking-wide">Yearbook</span>
+              </Link>
+              {isStaff && (
+                <a
+                  href="/admin/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#012140] to-[#1a4ea3] hover:from-[#0f2e75] hover:to-[#2558c4] text-white text-xs font-bold rounded-full transition shadow-sm"
+                >
+                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping" />
+                  <span>Admin Mode | Exit to Admin</span>
+                </a>
+              )}
+            </div>
 
           {/* Quick Live Status Dot */}
             <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">

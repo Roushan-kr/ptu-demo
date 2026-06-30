@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { generateAccessToken, generateRefreshToken } from '@/lib/auth/jwt'
+import { loginLimiter } from '@/lib/rate-limit'
 
 // Helper to parse expiry like "15m" to milliseconds
 function parseExpiryToMs(expiry: string): number {
@@ -15,6 +16,12 @@ function parseExpiryToMs(expiry: string): number {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
+    const { success } = loginLimiter.check(ip)
+    if (!success) {
+      return NextResponse.json({ error: 'Too many login attempts. Please try again in a minute.' }, { status: 429 })
+    }
+
     const { email, password } = await req.json()
 
     if (!email || !password) {

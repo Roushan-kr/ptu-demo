@@ -25,6 +25,8 @@ interface AlumniProfile {
   currentCompany?: string;
   city?: string;
   avatarUrl?: string;
+  isAdmin?: boolean;
+  role?: string;
 }
 
 interface EventSnippet {
@@ -104,7 +106,26 @@ export default function AlumniNoticeboard() {
         setLoading(false);
       })
       .catch(() => {
-        router.push('/alumni/login');
+        // Check if admin session exists before redirecting to alumni login
+        fetch('/api/admin/me')
+          .then(res => res.ok ? res.json() : Promise.reject())
+          .then((adminData) => {
+            // Populate profile with actual admin details from Staff table
+            setProfile({
+              name: adminData.user?.name || 'Admin',
+              email: adminData.user?.email || '',
+              isAdmin: true,
+              role: adminData.user?.role || 'ADMIN',
+              batchYear: 0,
+              branch: '',
+              college: 'IKGPTU Staff',
+              currentRole: adminData.user?.role || 'Administrator',
+            });
+            setLoading(false);
+          })
+          .catch(() => {
+            router.push('/alumni/login');
+          });
       });
   }, [router]);
 
@@ -169,27 +190,43 @@ export default function AlumniNoticeboard() {
         <div className="relative">
           <p className="text-red-200 text-sm font-semibold uppercase tracking-widest mb-1">Welcome back</p>
           <h1 className="text-3xl md:text-4xl font-black mb-1">{profile?.name} 👋</h1>
-          <p className="text-red-100">{profile?.branch} · Class of {profile?.batchYear}</p>
-          {profile?.currentCompany && (
-            <p className="text-red-100 mt-1 text-sm">
-              📍 {profile.currentRole ? `${profile.currentRole} at ` : ''}{profile.currentCompany}
-              {profile.city ? `, ${profile.city}` : ''}
-            </p>
+          {profile?.isAdmin ? (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white border border-white/30">
+                {profile.role || 'ADMINISTRATOR'}
+              </span>
+              <p className="text-red-100 text-sm">{profile.email}</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-red-100">{profile?.branch} · Class of {profile?.batchYear}</p>
+              {profile?.currentCompany && (
+                <p className="text-red-100 mt-1 text-sm">
+                  📍 {profile.currentRole ? `${profile.currentRole} at ` : ''}{profile.currentCompany}
+                  {profile.city ? `, ${profile.city}` : ''}
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
 
       {/* Profile Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
+        {(profile?.isAdmin ? [
+          { label: 'Name', value: profile?.name, border: '#C41E3A' },
+          { label: 'Email', value: profile?.email, border: '#003D7A' },
+          { label: 'Role', value: profile?.role || 'Administrator', border: '#0057B8' },
+          { label: 'Department', value: 'IKGPTU Staff Portal', border: '#C41E3A' },
+        ] : [
           { label: 'Email', value: profile?.email, border: '#C41E3A' },
           { label: 'College', value: profile?.college, border: '#003D7A' },
           { label: 'Current Role', value: profile?.currentRole || 'Not specified', border: '#0057B8' },
           { label: 'Location', value: profile?.city || 'Not specified', border: '#C41E3A' },
-        ].map(({ label, value, border }) => (
+        ]).map(({ label, value, border }) => (
           <div key={label} className="bg-white rounded-xl shadow-sm p-5 border-t-4" style={{ borderTopColor: border }}>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">{label}</p>
-            <p className="text-gray-900 font-bold text-sm truncate">{value}</p>
+            <p className="text-gray-900 font-bold text-sm truncate">{value || '—'}</p>
           </div>
         ))}
       </div>

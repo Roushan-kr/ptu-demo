@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getCurrentAlumni } from '@/lib/auth/getCurrentAlumni';
+import { getCurrentAlumni, getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 import { getAuthenticatedStaff } from '@/lib/auth/staff-auth';
 import { jobSchema, type JobSchemaType } from '@/schemas/job';
 import { Prisma } from '@prisma/client';
@@ -175,16 +175,21 @@ type ActionResult<T = undefined> =
 // ─────────────────────────────────────────
 
 export async function getJobsAction(params: JobFilterParams) {
-  const alumni = await getCurrentAlumni();
-  if (!alumni) throw new Error('Unauthorized');
+  const identity = await getCurrentAlumniOrStaff();
+  if (!identity) throw new Error('Unauthorized');
+
+  // Resolve alumni id — null means an admin/staff is viewing (read-only)
+  const alumniId = identity.isAdmin ? null : identity.alumni.id;
 
   const { tab = 'all', page = 1, limit = 8 } = params;
   const skip = (page - 1) * limit;
 
   let tabClause: Prisma.JobWhereInput | undefined;
-  if (tab === 'posted') tabClause = { postedByAlumniId: alumni.id };
-  else if (tab === 'applied')
-    tabClause = { metadata: { path: ['applicants'], array_contains: alumni.id } };
+  if (alumniId) {
+    if (tab === 'posted') tabClause = { postedByAlumniId: alumniId };
+    else if (tab === 'applied')
+      tabClause = { metadata: { path: ['applicants'], array_contains: alumniId } };
+  }
 
   const whereClause = buildWhereClause(params, tabClause);
 
@@ -208,7 +213,7 @@ export async function getJobsAction(params: JobFilterParams) {
   const formattedJobs = await Promise.all(
     jobs.map(async (job) => {
       const meta = normalizeMetadata(job.metadata);
-      const isOwner = job.postedByAlumniId === alumni.id;
+      const isOwner = alumniId ? job.postedByAlumniId === alumniId : false;
 
       return {
         ...job,
@@ -216,7 +221,7 @@ export async function getJobsAction(params: JobFilterParams) {
         applicantsProfiles: isOwner ? await resolveApplicantProfiles(meta.applicants) : [],
         applicants: meta.applicants,
         postedByMe: isOwner,
-        appliedByMe: meta.applicants.includes(alumni.id),
+        appliedByMe: alumniId ? meta.applicants.includes(alumniId) : false,
         isExpired: job.expireAt ? new Date(job.expireAt) < new Date() : false,
       };
     }),

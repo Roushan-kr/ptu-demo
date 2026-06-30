@@ -129,6 +129,8 @@ model Staff {
   importedAlumni   Alumni[]
   reviewedRequests RegistrationRequest[]
   jobs             Job[]
+  posts            Post[]
+  albums           Album[]
 
   @@map("staff")
 }
@@ -387,18 +389,21 @@ model WorkExperience {
 }
 
 model Post {
-  id        String    @id @default(cuid())
-  content   String?
-  images    String[]
-  authorId  String
-  author    Alumni    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  content         String?
+  images          String[]
+  authorId        String?
+  author          Alumni?   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postedByStaffId String?
+  postedByStaff   Staff?    @relation(fields: [postedByStaffId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   likes    Like[]
   comments Comment[]
 
   @@index([authorId])
+  @@index([postedByStaffId])
   @@map("posts")
 }
 
@@ -449,17 +454,20 @@ model StartUp {
 }
 
 model Album {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  alumniId    String
-  alumni      Alumni       @relation(fields: [alumniId], references: [id], onDelete: Cascade)
-  images      AlbumImage[]
-  isPublished  Boolean      @default(false) // admin let it be published or not (public property scope to campus)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  alumniId        String?
+  alumni          Alumni?      @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+  postedByStaffId String?
+  postedByStaff   Staff?       @relation(fields: [postedByStaffId], references: [id], onDelete: Cascade)
+  images          AlbumImage[]
+  isPublished     Boolean      @default(false) // admin let it be published or not (public property scope to campus)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   @@index([alumniId])
+  @@index([postedByStaffId])
   @@map("albums")
 }
 

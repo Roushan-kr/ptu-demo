@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosClient from '@/lib/axios-client';
 
 interface AdminUser {
@@ -11,20 +11,20 @@ interface AdminUser {
 }
 
 export function useAdminAuth() {
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchUser = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosClient.get('/api/admin/me');
-      setUser(res.data.user);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: user, isLoading: loading, refetch } = useQuery<AdminUser | null>({
+    queryKey: ['admin-user'],
+    queryFn: async () => {
+      try {
+        const res = await axiosClient.get('/api/admin/me');
+        return res.data.user;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 15 * 60 * 1000, // cache for 15 minutes
+  });
 
   const logout = async () => {
     try {
@@ -32,14 +32,10 @@ export function useAdminAuth() {
     } catch (error) {
       console.error('Logout error', error);
     } finally {
-      setUser(null);
+      queryClient.setQueryData(['admin-user'], null);
       window.location.href = '/admin/auth/login';
     }
   };
 
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
-  return { user, loading, logout, refetch: fetchUser };
+  return { user: user || null, loading, logout, refetch };
 }

@@ -74,23 +74,40 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Breakdown of RSVP status counts
-    const eventsWithRsvpBreakdown = await Promise.all(
-      events.map(async (event) => {
-        const attendingCount = await prisma.rsvp.count({
-          where: { eventId: event.id, status: 'ATTENDING' }
-        });
-        const maybeCount = await prisma.rsvp.count({
-          where: { eventId: event.id, status: 'MAYBE' }
-        });
-        return {
-          ...event,
-          attendingCount,
-          maybeCount,
-          totalRsvps: event._count.rsvps
-        };
-      })
-    );
+    const eventIds = events.map((e) => e.id);
+    const rsvpGroups =
+      eventIds.length > 0
+        ? await prisma.rsvp.groupBy({
+            by: ['eventId', 'status'],
+            where: { eventId: { in: eventIds } },
+            _count: { id: true },
+          })
+        : [];
+
+    const countsMap: Record<string, { ATTENDING: number; MAYBE: number }> = {};
+    eventIds.forEach((id) => {
+      countsMap[id] = { ATTENDING: 0, MAYBE: 0 };
+    });
+
+    rsvpGroups.forEach((g) => {
+      if (countsMap[g.eventId]) {
+        if (g.status === 'ATTENDING') {
+          countsMap[g.eventId].ATTENDING = g._count.id;
+        } else if (g.status === 'MAYBE') {
+          countsMap[g.eventId].MAYBE = g._count.id;
+        }
+      }
+    });
+
+    const eventsWithRsvpBreakdown = events.map((event) => {
+      const counts = countsMap[event.id] || { ATTENDING: 0, MAYBE: 0 };
+      return {
+        ...event,
+        attendingCount: counts.ATTENDING,
+        maybeCount: counts.MAYBE,
+        totalRsvps: event._count.rsvps,
+      };
+    });
 
     return NextResponse.json(eventsWithRsvpBreakdown);
   } catch (error) {

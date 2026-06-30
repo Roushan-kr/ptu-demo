@@ -4,7 +4,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, LucideIcon } from 'lucide-react';
+import { Menu, X, LogOut, Users, Calendar, Home, Import, Briefcase, Rocket, BookOpen, FileText, LucideIcon, ExternalLink } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 
 // Define the shape of a navigation item
@@ -20,6 +20,7 @@ const allModules: NavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: Home, module: 'dashboard' },
   { name: 'Import Alumni', href: '/admin/import', icon: Import, module: 'import' },
   { name: 'Alumni', href: '/admin/alumni', icon: Users, module: 'alumni' },
+  { name: 'Posts & Gallery', href: '/admin/posts', icon: FileText, module: 'posts' },
   { name: 'Yearbook', href: '/admin/yearbook', icon: BookOpen, module: 'yearbook' },
   { name: 'Opportunities', href: '/admin/jobs', icon: Briefcase, module: 'jobs' },
   { name: 'Events', href: '/admin/events', icon: Calendar, module: 'events' },
@@ -160,7 +161,17 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-0 w-full px-3">
+        <div className="absolute bottom-6 left-0 w-full px-3 space-y-1">
+          {/* Enter Alumni Portal shortcut */}
+          <Link
+            href="/alumni/feed"
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white border border-white/10"
+          >
+            <ExternalLink size={18} />
+            <span>Enter Alumni Portal</span>
+          </Link>
           <button
             onClick={logout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white"
@@ -183,6 +194,16 @@ export default function DashboardLayout({
           </button>
 
           <div className="flex items-center gap-3">
+            {/* Enter Alumni Portal button in topbar */}
+            <Link
+              href="/alumni/feed"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#012140] border border-[#012140]/20 hover:bg-[#012140]/5 rounded-lg transition"
+            >
+              <ExternalLink size={13} />
+              Alumni Portal
+            </Link>
             <div className="text-left">
               <p className="text-sm font-medium text-gray-900">{user.name}</p>
               <p className="text-xs text-gray-500">{user.email}</p>

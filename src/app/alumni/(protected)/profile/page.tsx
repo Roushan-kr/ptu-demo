@@ -79,6 +79,16 @@ function ProfilePageClient() {
       setFormData(data.user);
       setIsSelf(data.isSelf ?? !id);
     } catch {
+      // Before redirecting to alumni login, check if this is an admin session
+      try {
+        const adminRes = await fetch('/api/admin/me');
+        if (adminRes.ok) {
+          // Admin is authenticated but the profile fetch still failed (maybe no id param)
+          // Redirect back to admin dashboard
+          router.push('/admin/dashboard');
+          return;
+        }
+      } catch {}
       router.push('/alumni/login');
     } finally {
       setLoading(false);

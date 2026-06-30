@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { verifyOtpToken } from '@/lib/auth/jwt'
+import { otpLimiter } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
+    const { success } = otpLimiter.check(ip)
+    if (!success) {
+      return NextResponse.json({ error: 'Too many verification attempts. Please try again later.' }, { status: 429 })
+    }
+
     const { otp, otpToken } = await req.json()
 
     if (!otp || !otpToken) {

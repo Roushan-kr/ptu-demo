@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { 
   Search, Filter, Download, Eye, Mail, 
   ChevronLeft, ChevronRight, RefreshCw, 
   Users, GraduationCap, MapPin, Briefcase,
-  CheckCircle, Clock, XCircle, UserCheck, UserX, X
+  CheckCircle, Clock, XCircle, UserCheck, UserX, X, ExternalLink
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -184,7 +185,15 @@ export default function AlumniPage() {
               </p>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            <Link
+              href="/alumni/feed"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 px-4 py-2 border border-white/40 bg-white/15 hover:bg-white/25 text-white rounded-xl transition font-semibold text-sm backdrop-blur-sm"
+            >
+              <ExternalLink size={16}/> Enter Alumni Portal
+            </Link>
             <button
               onClick={exportToCSV}
               className="flex items-center gap-2 px-4 py-2 border border-white bg-[#012140] text-white rounded-xl hover:bg-[#012140]/90 transition"
@@ -511,16 +520,24 @@ export default function AlumniPage() {
                 {/* Footer Buttons */}
                 <div className="bg-slate-50 px-6 py-4 flex gap-3 border-t border-slate-100">
                   <a
-                    href={`/alumni/profile?id=${selectedAlumni.id}`}
+                    href={`/alumni/profile/${selectedAlumni.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex-1 text-center py-2.5 bg-[#012140] hover:bg-[#012140]/90 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center"
+                    className="flex-1 text-center py-2.5 bg-[#012140] hover:bg-[#012140]/90 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-2"
                   >
-                    View Detail Profile
+                    <ExternalLink size={13}/> View Full Profile
+                  </a>
+                  <a
+                    href="/alumni/feed"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 text-center py-2.5 bg-gradient-to-r from-[#1a4ea3] to-[#003D7A] hover:opacity-90 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <ExternalLink size={13}/> Enter Alumni Portal
                   </a>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition shadow-sm"
+                    className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition shadow-sm"
                   >
                     Close
                   </button>

@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       isRegistered: true,
       registeredAt: new Date(),
       lastLoginAt: new Date(),
+      inviteToken: null, //Nullify token to invalidate it after manual registration
     };
 
     const passwordHash = await bcrypt.hash(password, 10);

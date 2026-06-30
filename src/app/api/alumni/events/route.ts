@@ -1,25 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { prisma } from '@/lib/prisma';
+import { getCurrentAlumniOrStaff } from '@/lib/auth/getCurrentAlumni';
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('alumniAccessToken')?.value;
-  if (!token) {
+  const identity = await getCurrentAlumniOrStaff();
+  if (!identity) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let alumni;
-  try {
-    const payload = verifyAlumniAccessToken(token);
-    alumni = await prisma.alumni.findUnique({ where: { id: payload.id } });
-    if (!alumni) {
-      return NextResponse.json({ error: 'Alumni not found' }, { status: 404 });
-    }
-  } catch {
-    return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
-  }
+  // Resolve the alumni id — null means admin viewer (no personal RSVP tracking)
+  const alumniId = identity.isAdmin ? null : identity.alumni.id;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -67,24 +57,46 @@ export async function GET(req: NextRequest) {
       prisma.event.count({ where: whereClause }),
     ]);
 
-    const eventsWithRsvps = await Promise.all(
-      events.map(async (event) => {
-        const [attendingCount, myRsvp] = await Promise.all([
-          prisma.rsvp.count({ where: { eventId: event.id, status: 'ATTENDING' } }),
-          prisma.rsvp.findUnique({
-            where: { alumniId_eventId: { alumniId: alumni.id, eventId: event.id } },
-            select: { status: true, message: true },
-          }),
-        ]);
+    const eventIds = events.map((e) => e.id);
 
-        return {
-          ...event,
-          attendingCount,
-          myRsvp: myRsvp || null,
-          postedByMe: event.postedByAlumniId === alumni.id,
-        };
-      })
-    );
+    const [rsvpGroups, myRsvps] = await Promise.all([
+      eventIds.length > 0
+        ? prisma.rsvp.groupBy({
+            by: ['eventId'],
+            where: { eventId: { in: eventIds }, status: 'ATTENDING' },
+            _count: { id: true },
+          })
+        : Promise.resolve([]),
+      // Only fetch personal RSVPs if a real alumni is viewing
+      eventIds.length > 0 && alumniId
+        ? prisma.rsvp.findMany({
+            where: { alumniId, eventId: { in: eventIds } },
+            select: { eventId: true, status: true, message: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const attendingCounts: Record<string, number> = {};
+    const myRsvpMap: Record<string, { status: any; message: string | null }> = {};
+
+    eventIds.forEach((id) => {
+      attendingCounts[id] = 0;
+    });
+
+    rsvpGroups.forEach((g) => {
+      attendingCounts[g.eventId] = g._count.id;
+    });
+
+    myRsvps.forEach((r) => {
+      myRsvpMap[r.eventId] = { status: r.status, message: r.message };
+    });
+
+    const eventsWithRsvps = events.map((event) => ({
+      ...event,
+      attendingCount: attendingCounts[event.id] || 0,
+      myRsvp: myRsvpMap[event.id] || null,
+      postedByMe: alumniId ? event.postedByAlumniId === alumniId : false,
+    }));
 
     return NextResponse.json({
       events: eventsWithRsvps,

@@ -1,7 +1,7 @@
 // src/app/alumni/(protected)/gallery/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
@@ -85,7 +85,8 @@ const initialAlbums: AlbumItem[] = [
 ];
 
 export default function GalleryPage() {
-  const [albums, setStartups] = useState<AlbumItem[]>(initialAlbums);
+  const [albums, setStartups] = useState<AlbumItem[]>([]);
+  const [loadingAlbums, setLoadingAlbums] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Record<string, boolean>>({
     'College Days': false,
@@ -98,6 +99,20 @@ export default function GalleryPage() {
   // Image Viewer Lightbox Modal state
   const [activeAlbum, setActiveAlbum] = useState<AlbumItem | null>(null);
   const [viewerIndex, setViewerIndex] = useState(0);
+
+  // Fetch albums from API on mount
+  useEffect(() => {
+    fetch('/api/alumni/gallery')
+      .then(res => res.ok ? res.json() : { albums: [] })
+      .then(data => {
+        setStartups(data.albums || []);
+        setLoadingAlbums(false);
+      })
+      .catch(() => {
+        setStartups([]);
+        setLoadingAlbums(false);
+      });
+  }, []);
 
   // Album creation modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
