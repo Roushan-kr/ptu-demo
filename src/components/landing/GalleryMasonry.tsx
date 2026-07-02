@@ -55,18 +55,18 @@ export default function GalleryMasonry({ items }: { items: GalleryItem[] }) {
           ))}
         </div>
 
-        {/* Masonry-like Grid */}
-        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-6 [column-fill:_balance] box-border">
+        {/* Masonry-like Grid on Desktop, Horizontal Scroll on Mobile */}
+        <div className="flex overflow-x-auto gap-6 sm:columns-2 md:columns-3 lg:columns-4 sm:block pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
           {filteredItems.map((item) => (
             <div
               key={item.id}
               onClick={() => setLightboxImage(item)}
-              className="break-inside-avoid bg-slate-50 border border-slate-100 rounded-xl overflow-hidden mb-6 group cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative"
+              className="bg-slate-50 border border-slate-100 rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 relative w-[240px] flex-shrink-0 sm:w-auto sm:break-inside-avoid sm:mb-6"
             >
               <img
                 src={item.image}
                 alt={item.caption}
-                className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-44 sm:h-auto object-cover transform group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41E3A] mb-1">

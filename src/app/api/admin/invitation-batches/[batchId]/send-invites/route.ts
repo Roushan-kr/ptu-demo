@@ -44,7 +44,9 @@ export async function POST(
     include: {
       alumni: {
         where: {
-          inviteStatus: 'PENDING',
+          inviteStatus: {
+            not: 'REGISTERED',
+          },
           ...(scopedCampusId ? { campusId: scopedCampusId } : {}),
         },
       },
