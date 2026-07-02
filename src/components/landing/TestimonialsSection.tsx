@@ -65,11 +65,11 @@ export default function TestimonialsSection({ initialTestimonials }: { initialTe
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
+        <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 md:gap-8 pb-4 mb-12 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
           {approvedTestimonials.map((t) => (
             <div
               key={t.id}
-              className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative"
+              className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between relative w-[290px] flex-shrink-0 md:w-auto"
             >
               <div className="absolute top-8 right-8 text-slate-100 text-6xl font-serif select-none pointer-events-none">
                 “

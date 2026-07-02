@@ -69,16 +69,10 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <Link
-                    href={slide.ctaLink}
-                    className="px-8 py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white font-bold rounded-xl hover:shadow-xl hover:shadow-red-900/30 transition-all duration-300 text-sm tracking-wide"
+                    href="/alumni/login"
+                    className="px-8 py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#e62648] text-white font-extrabold rounded-xl hover:shadow-xl hover:shadow-red-900/30 transition-all duration-300 text-sm tracking-wide"
                   >
-                    {slide.ctaText}
-                  </Link>
-                  <Link
-                    href="#features"
-                    className="px-8 py-3.5 border-2 border-white/60 text-white font-semibold rounded-xl hover:bg-white/10 hover:border-white transition-all duration-300 text-sm backdrop-blur-sm"
-                  >
-                    Explore Platform
+                    Are You Alumni?
                   </Link>
                 </div>
               </div>

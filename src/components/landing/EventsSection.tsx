@@ -93,11 +93,11 @@ export default function EventsSection({ events }: { events: Event[] }) {
             No upcoming events listed in this category right now. Check back soon!
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
             {filteredEvents.map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full"
+                className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full w-[290px] flex-shrink-0 md:w-auto"
               >
                 {/* Event Cover Photo */}
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
@@ -142,13 +142,6 @@ export default function EventsSection({ events }: { events: Event[] }) {
                       </span>
                       <span className="truncate">{event.venue}</span>
                     </div>
-
-                    <button
-                      onClick={() => setRsvpEvent(event)}
-                      className="w-full py-2.5 bg-slate-550 border-2 border-[#003D7A]/80 text-[#003D7A] font-bold text-xs rounded-xl hover:bg-[#003D7A] hover:text-white transition-all duration-300 text-center uppercase tracking-wider"
-                    >
-                      RSVP Now
-                    </button>
                   </div>
                 </div>
               </div>

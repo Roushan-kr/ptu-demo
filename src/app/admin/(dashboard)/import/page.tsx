@@ -411,13 +411,21 @@ export default function ImportPage() {
                           type="button"
                           onClick={() => handleSendInvites(batch)}
                           disabled={sendingBatchId === batch.id}
-                          className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:opacity-50"
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                            batch.inviteStatus === 'COMPLETED'
+                              ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-500 hover:bg-amber-100'
+                              : 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-500 hover:bg-rose-100'
+                          }`}
                           aria-label={`Send invites for ${batch.label}`}
                         >
                           <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current">
                             <path d="M2.5 4.5A1.5 1.5 0 014 3h12a1.5 1.5 0 011.5 1.5v11A1.5 1.5 0 0116 17H4a1.5 1.5 0 01-1.5-1.5v-11zm2.1-.5L10 8.2 15.4 4H4.6zM16 5.2l-5.7 4.4a.5.5 0 01-.6 0L4 5.2v10.3a.5.5 0 00.5.5h11a.5.5 0 00.5-.5V5.2z" />
                           </svg>
-                          {sendingBatchId === batch.id ? 'Sending...' : 'Send'}
+                          {sendingBatchId === batch.id 
+                            ? 'Sending...' 
+                            : batch.inviteStatus === 'COMPLETED' 
+                              ? 'Send Again' 
+                              : 'Send'}
                         </button>
                         <button
                           type="button"

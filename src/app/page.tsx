@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import * as LucideIcons from 'lucide-react';
 import { verifyAlumniAccessToken } from '@/lib/auth/alumni-jwt';
 import { GET } from '@/app/api/landing-data/route';
 
@@ -34,12 +35,56 @@ export default async function HomePage() {
     redirect('/alumni/feed');
   }
 
-  // Load landing page data (mock API route helper call)
+  // Load landing page data (API route call)
   const data = await getLandingData();
+
+  // Static campuses list as requested
+  const staticCampuses = [
+    {
+      id: 'mohali-1',
+      name: 'Mohali-I Campus',
+      location: 'Mohali, Punjab',
+      iconName: 'Building',
+      description: 'Pioneering specialized computer applications, professional management modules, and emerging science labs.',
+      alumniCount: '1,200+',
+    },
+    {
+      id: 'mohali-2',
+      name: 'Mohali-II Campus',
+      location: 'Mohali, Punjab',
+      iconName: 'Building2',
+      description: 'Advanced center of technology studies, computer sciences, software incubation cells, and startups.',
+      alumniCount: '800+',
+    },
+    {
+      id: 'amritsar',
+      name: 'Amritsar Campus',
+      location: 'Amritsar, Punjab',
+      iconName: 'GraduationCap',
+      description: 'Nurturing foundational technology pathways, mechanical designs, computer networking, and placements.',
+      alumniCount: '1,500+',
+    },
+    {
+      id: 'hoshiarpur',
+      name: 'Hoshiarpur Campus',
+      location: 'Hoshiarpur, Punjab',
+      iconName: 'School',
+      description: 'Fostering core engineering practices, local industrial trades, and foundational sciences research.',
+      alumniCount: '1,100+',
+    },
+    {
+      id: 'batala',
+      name: 'Batala Campus',
+      location: 'Batala, Punjab',
+      iconName: 'Library',
+      description: 'Promoting vocational technical excellence, manufacturing trades, and local community startups.',
+      alumniCount: '700+',
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans antialiased text-gray-900 selection:bg-[#C41E3A] selection:text-white">
-      {/* 12. Navigation Header */}
+      {/* Navigation Header */}
       <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -70,27 +115,20 @@ export default async function HomePage() {
       <section className="bg-gradient-to-r from-[#003D7A] to-[#C41E3A] py-14 text-white relative overflow-hidden shadow-inner">
         <div className="absolute inset-0 bg-blue-950/20 backdrop-brightness-75"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-y-8 gap-x-4 md:gap-4 text-center justify-center">
-            <div className="md:border-r md:border-white/10">
-              <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{data.stats.totalAlumni}</p>
-              <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">Total Alumni</p>
-            </div>
-            <div className="md:border-r md:border-white/10">
-              <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{data.stats.campuses}</p>
-              <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">Campuses</p>
-            </div>
-            <div className="md:border-r md:border-white/10 sm:border-none">
-              <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{data.stats.collegesAffiliated}+</p>
-              <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">Affiliated Colleges</p>
-            </div>
-            <div className="md:border-r md:border-white/10">
-              <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{data.stats.countriesRepresented}+</p>
-              <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">Countries</p>
-            </div>
-            <div className="col-span-2 sm:col-span-1 md:col-span-1">
-              <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{data.stats.eventsHosted}+</p>
-              <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">Events Hosted</p>
-            </div>
+          <div className="flex flex-wrap md:grid md:grid-cols-5 gap-y-8 gap-x-4 justify-center text-center">
+            {data.statsList?.map((stat: any, idx: number) => {
+              // Resolve Lucide Icon dynamically
+              const IconComponent = (LucideIcons as any)[stat.icon] || LucideIcons.BarChart3;
+              return (
+                <div key={idx} className="flex-1 min-w-[140px] md:border-r md:border-white/10 last:border-none flex flex-col items-center">
+                  <div className="mb-2 p-2 bg-white/10 rounded-xl">
+                    <IconComponent size={22} className="text-white" />
+                  </div>
+                  <p className="text-3xl md:text-4.5xl font-black mb-1.5 tracking-tight">{stat.number}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-slate-200 font-bold">{stat.label}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -108,7 +146,7 @@ export default async function HomePage() {
                 {data.welcomeNote.title}
               </h2>
               <div 
-                className="text-gray-600 text-sm leading-relaxed font-light mb-8"
+                className="text-gray-655 text-sm leading-relaxed font-light mb-8"
                 dangerouslySetInnerHTML={{ __html: data.welcomeNote.body }}
               />
               <div>
@@ -135,7 +173,7 @@ export default async function HomePage() {
       {/* 4. Upcoming Events Section */}
       <EventsSection events={data.events} />
 
-      {/* 5. News & Updates Section */}
+      {/* 5. News & Campus Updates Section */}
       <section id="news" className="py-24 bg-slate-50 scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -147,11 +185,12 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
             {data.news.map((item: any) => (
               <div 
                 key={item.id}
-                className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group"
+                className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto"
               >
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                   <img 
@@ -164,7 +203,7 @@ export default async function HomePage() {
                       ★ Featured
                     </span>
                   )}
-                  <span className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded">
+                  <span className="absolute bottom-4 right-4 bg-slate-900/85 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-0.5 rounded">
                     {item.category}
                   </span>
                 </div>
@@ -189,8 +228,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 6. Notable Alumni / Spotlight */}
-      <section id="spotlight" className="py-10 bg-white scroll-mt-4">
+      {/* 6. Notable Alumni / Spotlight Section */}
+      <section id="spotlight" className="py-24 bg-white scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Hall of Fame</h3>
@@ -201,13 +240,14 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
             {data.notableAlumni.map((alum: any) => (
               <div 
                 key={alum.id}
-                className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col text-center"
+                className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col text-center w-[285px] flex-shrink-0 md:w-auto"
               >
-                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-100 shadow-inner">
+                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-100 shadow-inner bg-slate-50">
                   <img 
                     src={alum.photo} 
                     alt={alum.name} 
@@ -221,7 +261,7 @@ export default async function HomePage() {
                 <div className="my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-semibold text-gray-700">
                   {alum.designation} @ <span className="text-[#003D7A]">{alum.company}</span>
                 </div>
-                <p className="text-gray-600 text-xs leading-relaxed font-light my-4">
+                <p className="text-gray-600 text-xs leading-relaxed font-light my-4 line-clamp-3">
                   "{alum.bio}"
                 </p>
                 <a 
@@ -244,8 +284,8 @@ export default async function HomePage() {
       {/* 8. Gallery / Memories Section */}
       <GalleryMasonry items={data.gallery} />
 
-      {/* 9. Campus Showcase */}
-      <section id="campuses" className="py-10 bg-slate-50 scroll-mt-4">
+      {/* 9. Campus Showcase (Statically Fixed) */}
+      <section id="campuses" className="py-24 bg-slate-50 scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Our Footprint</h3>
@@ -256,30 +296,39 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {data.campuses.map((campus: any) => (
-              <div 
-                key={campus.id}
-                className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full"
-              >
-                <div className="text-3xl mb-4">
-                  {campus .logo.includes('https://') || campus .logo.includes('http://') ? (
-                    <img src={campus.logo} alt={campus.name} className="h-14" />
-                  ) : (
-                    <span className="text-xl">{campus.logo}</span>
-                  )}
+          {/* Horizontal scroll support for campuses on mobile */}
+          <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-3 lg:grid-cols-5 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
+            {staticCampuses.map((campus) => {
+              const IconComp = (LucideIcons as any)[campus.iconName] || LucideIcons.School;
+              return (
+                <div 
+                  key={campus.id}
+                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden w-[260px] flex-shrink-0 md:w-auto"
+                >
+                  {/* Elegant Gradient Image Placeholder */}
+                  <div className="h-36 w-full bg-gradient-to-br from-[#003D7A]/15 to-[#C41E3A]/15 flex flex-col items-center justify-center p-4 border-b border-slate-100 relative group">
+                    <div className="p-3 bg-white/95 rounded-2xl shadow-md text-[#003D7A] group-hover:scale-110 transition-all duration-300">
+                      <IconComp size={24} />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-widest text-[#003D7A] font-extrabold mt-3">
+                      [ Image Placeholder ]
+                    </span>
+                  </div>
+
+                  <div className="p-6 flex flex-col flex-grow">
+                    <h4 className="text-base font-extrabold text-gray-900 mb-1">{campus.name}</h4>
+                    <p className="text-[10px] font-bold text-[#C41E3A] uppercase tracking-wider mb-3">📍 {campus.location}</p>
+                    <p className="text-gray-500 text-xs leading-relaxed mb-4 font-light flex-grow">
+                      {campus.description}
+                    </p>
+                    <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-[11px] font-bold text-gray-700">
+                      <span>{campus.alumniCount} Alumni</span>
+                      <span className="text-slate-400 font-medium">IKGPTU Org</span>
+                    </div>
+                  </div>
                 </div>
-                <h4 className="text-lg font-bold text-gray-900 mb-1">{campus.name}</h4>
-                <p className="text-xs font-semibold text-[#C41E3A] uppercase tracking-wider mb-4">📍 {campus.location}</p>
-                <p className="text-gray-650 text-xs leading-relaxed mb-6 font-light">
-                  {campus.description}
-                </p>
-                <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between text-xs">
-                  <span className="font-bold text-gray-800">{campus.alumniCount} Alumni</span>
-                  <a href={campus.link} className="font-semibold text-[#003D7A] hover:underline">Visit Page →</a>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -291,7 +340,7 @@ export default async function HomePage() {
             Partner / Affiliated Institutions
           </p>
           <div className="flex flex-wrap items-center justify-center gap-12 opacity-70">
-            {data.affiliatedColleges.map((college: any) => (
+            {data.affiliatedColleges?.map((college: any) => (
               <div key={college.id} className="flex items-center gap-2 hover:opacity-100 transition-opacity">
                 {college.logo.includes('https://') || college.logo.includes('http://') ? (
                   <img src={college.logo} alt={college.name} className="h-14" />
@@ -338,15 +387,15 @@ export default async function HomePage() {
             <div>
               <h4 className="font-extrabold text-white mb-4 tracking-wider text-xs uppercase">Connect Safely</h4>
               <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
-                <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
+                <a href="https://www.linkedin.com/school/vinukonda-b.ed.-college/posts/?feedView=all" className="hover:text-white transition-colors">LinkedIn</a>
                 <a href="#" className="hover:text-white transition-colors">Facebook</a>
                 <a href="#" className="hover:text-white transition-colors">Twitter</a>
-                <a href="#" className="hover:text-white transition-colors">YouTube</a>
+                <a href="https://www.instagram.com/ikgujralptu" className="hover:text-white transition-colors">Instagram</a>
               </div>
             </div>
           </div>
           <div className="border-t border-slate-800/80 pt-8 text-center text-[11px] font-medium tracking-wide text-slate-500">
-            <p>&copy; {new Date().getFullYear()} IKGPTU Alumni Network. Designed to University Excellence Standards. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} IKGPTU Alumni Network. Designed to University Excellence Standards. All rights Reserved.</p>
           </div>
         </div>
       </footer>

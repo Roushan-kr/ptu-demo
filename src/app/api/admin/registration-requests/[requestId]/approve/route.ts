@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { StaffRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthenticatedStaff, CampusScopeError } from '@/lib/auth/staff-auth';
+import { sendEmail } from '@/lib/brevo';
 
 export async function POST(
   req: NextRequest,
@@ -129,6 +130,49 @@ export async function POST(
 
       return { updatedRequest, newAlumni };
     });
+
+    // Send registration approval notification email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() ;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; color: #1f2937;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #003D7A; margin: 0;">IKGPTU Alumni Connect</h2>
+          <p style="font-size: 14px; color: #6b7280; margin: 4px 0 0;">University Alumni Relations Portal</p>
+        </div>
+        
+        <p>Dear <strong>${existingRequest.name}</strong>,</p>
+        <p>We are pleased to inform you that your registration request for the I.K.G. Punjab Technical University Alumni Portal has been <strong>approved</strong> and your account is now active!</p>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0 0 8px; font-weight: bold; color: #0f172a;">Account Details:</p>
+          <p style="margin: 4px 0; font-size: 14px;"><strong>Email:</strong> <code>${existingRequest.email}</code></p>
+          <p style="margin: 4px 0; font-size: 14px;"><strong>Campus:</strong> ${campus.name}</p>
+          <p style="margin: 4px 0; font-size: 14px;"><strong>Course / Branch:</strong> ${existingRequest.branch} ${existingRequest.course ? `(${existingRequest.course})` : ''}</p>
+        </div>
+        
+        <p>You can now log in to the portal using your registered email and credentials or your Google/LinkedIn account (depending on how you registered).</p>
+        
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${appUrl}/alumni/login" style="display: inline-block; padding: 12px 24px; background: #C41E3A; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Login to Portal</a>
+        </div>
+        
+        <p style="font-size: 14px; line-height: 1.5;">Welcome to our alumni network! We are excited to have you connect with your fellow alumni, find career opportunities, share milestones, and engage with the university community.</p>
+        
+        <hr style="margin: 24px 0; border: 0; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">IKGPTU Alumni Connect · University Alumni Relations Office</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail({
+        to: [{ email: existingRequest.email, name: existingRequest.name }],
+        subject: 'IKGPTU Alumni Portal — Registration Approved!',
+        htmlContent: emailHtml,
+        tags: ['alumni-approval'],
+      });
+    } catch (emailErr) {
+      console.error('[APPROVE_EMAIL_ERROR] Failed to send approval email:', emailErr);
+    }
 
     return NextResponse.json({
       message: 'Registration request approved and alumni account activated.',

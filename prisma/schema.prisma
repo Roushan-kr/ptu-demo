@@ -250,6 +250,7 @@ model Event {
   coverImageUrl String?
   rsvpDeadline  DateTime?
   isPublished   Boolean   @default(false)
+  showOnLanding Boolean   @default(false)
 
   postedByStaffId  String?
   postedByStaff    Staff?  @relation(fields: [postedByStaffId], references: [id])
@@ -476,7 +477,8 @@ model AlbumImage {
   albumId   String
   album     Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
   imageUrl  String
-  caption   String?
+  caption       String?
+  showOnLanding Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([albumId])
@@ -525,3 +527,85 @@ model Connection {
   @@index([status])
   @@map("connections")
 }
+
+// ─────────────────────────────────────────
+// NEW MODELS FOR LANDING PAGE MANAGEMENT
+// ─────────────────────────────────────────
+
+model LandingHeroSlide {
+  id           String   @id @default(cuid())
+  imageUrl     String
+  headline     String?
+  subtext      String?
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("landing_hero_slides")
+}
+
+model LandingStat {
+  id           String   @id @default(cuid())
+  number       String
+  label        String
+  icon         String
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("landing_stats")
+}
+
+model LandingWelcome {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  photo       String
+  name        String
+  designation String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("landing_welcomes")
+}
+
+model LandingNews {
+  id            String   @id @default(cuid())
+  title         String
+  summary       String
+  body          String?
+  coverImage    String?
+  category      String
+  author        String
+  publishedDate String
+  campusTag     String
+  featured      Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("landing_news")
+}
+
+model LandingTestimonial {
+  id           String   @id @default(cuid())
+  name         String
+  photo        String?
+  batchYear    Int?
+  branch       String?
+  designation  String?
+  company      String?
+  quote        String
+  linkedIn     String?
+  isSpotlight  Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("landing_testimonials")
+}
+
