@@ -11,6 +11,8 @@ import EventsSection from '@/components/landing/EventsSection';
 import TestimonialsSection from '@/components/landing/TestimonialsSection';
 import GalleryMasonry from '@/components/landing/GalleryMasonry';
 import NewsletterSignup from '@/components/landing/NewsletterSignup';
+import HomeLoader from '@/components/landing/HomeLoader';
+import LandingNav from '@/components/landing/LandingNav';
 
 async function getLandingData() {
   const res = await GET();
@@ -84,29 +86,11 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans antialiased text-gray-900 selection:bg-[#C41E3A] selection:text-white">
+      {/* Home Loader Overlay */}
+      <HomeLoader />
+
       {/* Navigation Header */}
-      <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-md shadow-blue-900/10 tracking-wider overflow-hidden border border-slate-100">
-              <img src="/icon.png" alt="logo" className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <h1 className="text-lg md:text-xl font-extrabold text-gray-900 tracking-tight leading-none mb-1">IKGPTU Alumni</h1>
-              <p className="text-[10px] font-bold text-[#C41E3A] tracking-widest uppercase">Since 1997</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/alumni/login" 
-              className="px-5 py-2.5 bg-gradient-to-r from-[#003D7A] to-[#002b56] text-white rounded-xl hover:from-[#C41E3A] hover:to-[#a01830] shadow-md shadow-blue-950/10 hover:shadow-lg transition-all duration-300 font-bold text-xs tracking-wider uppercase"
-            >
-              Sign In
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* 1. Hero Section (Dynamic rotating carousel) */}
       <HeroCarousel slides={data.heroSlides} />
@@ -134,7 +118,7 @@ export default async function HomePage() {
       </section>
 
       {/* 3. About / Welcome Note */}
-      <section className="py-24 bg-white">
+      <section id="leadership" className="scroll-mt-16 py-24 bg-gradient-to-b from-white via-slate-50/60 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             {/* Note text */}
@@ -142,11 +126,11 @@ export default async function HomePage() {
               <span className="inline-block px-3 py-1 bg-[#003D7A]/5 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-[#003D7A] mb-4">
                 Message from Leadership
               </span>
-              <h2 className="text-3xl font-black text-gray-900 mb-6 tracking-tight">
+              <h2 className="text-3xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
                 {data.welcomeNote.title}
               </h2>
               <div 
-                className="text-gray-655 text-sm leading-relaxed font-light mb-8"
+                className="text-gray-600 text-sm leading-relaxed font-light mb-8"
                 dangerouslySetInnerHTML={{ __html: data.welcomeNote.body }}
               />
               <div>
@@ -154,10 +138,14 @@ export default async function HomePage() {
                 <p className="text-xs text-[#C41E3A] font-bold uppercase tracking-wider mt-0.5">{data.welcomeNote.designation}</p>
               </div>
             </div>
-            {/* Leadership Photo Card */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative p-3 bg-white border border-slate-100 rounded-3xl shadow-xl max-w-sm w-full">
-                <div className="relative h-96 w-full rounded-2xl overflow-hidden bg-slate-50">
+            
+            {/* Leadership Photo Card with Layered Offset Borders */}
+            <div className="lg:col-span-5 flex justify-center relative">
+              <div className="absolute -inset-2.5 bg-gradient-to-r from-[#C41E3A] to-[#003D7A] rounded-[2.5rem] blur opacity-15 -rotate-1 scale-95" />
+              <div className="absolute -top-3 -left-3 w-16 h-16 border-t-4 border-l-4 border-[#C41E3A] rounded-tl-3xl hidden sm:block" />
+              <div className="absolute -bottom-3 -right-3 w-16 h-16 border-b-4 border-r-4 border-[#003D7A] rounded-br-3xl hidden sm:block" />
+              <div className="relative p-3.5 bg-white border border-slate-100 rounded-[2.2rem] shadow-2xl max-w-sm w-full z-10 transition-transform duration-300 hover:scale-[1.02]">
+                <div className="relative h-96 w-full rounded-3xl overflow-hidden bg-slate-50">
                   <img 
                     src={data.welcomeNote.photo} 
                     alt={data.welcomeNote.name} 
@@ -174,7 +162,7 @@ export default async function HomePage() {
       <EventsSection events={data.events} />
 
       {/* 5. News & Campus Updates Section */}
-      <section id="news" className="py-24 bg-slate-50 scroll-mt-16">
+      <section id="news" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Stay Updated</h3>
@@ -190,7 +178,7 @@ export default async function HomePage() {
             {data.news.map((item: any) => (
               <div 
                 key={item.id}
-                className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto"
+                className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto"
               >
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                   <img 
@@ -229,7 +217,7 @@ export default async function HomePage() {
       </section>
 
       {/* 6. Notable Alumni / Spotlight Section */}
-      <section id="spotlight" className="py-24 bg-white scroll-mt-16">
+      <section id="spotlight" className="py-24 bg-gradient-to-b from-white via-blue-50/15 to-white scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Hall of Fame</h3>
@@ -245,13 +233,13 @@ export default async function HomePage() {
             {data.notableAlumni.map((alum: any) => (
               <div 
                 key={alum.id}
-                className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col text-center w-[285px] flex-shrink-0 md:w-auto"
+                className="bg-white rounded-3xl border border-slate-100 p-6 shadow-md hover:shadow-xl hover:shadow-[#003D7A]/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col text-center w-[285px] flex-shrink-0 md:w-auto"
               >
-                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-100 shadow-inner bg-slate-50">
+                <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-200 bg-slate-50 relative p-0.5 bg-gradient-to-tr from-[#003D7A] to-[#C41E3A]">
                   <img 
                     src={alum.photo} 
                     alt={alum.name} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full bg-white"
                   />
                 </div>
                 <h4 className="text-base font-bold text-gray-900">{alum.name}</h4>
@@ -261,7 +249,7 @@ export default async function HomePage() {
                 <div className="my-3 text-xs bg-slate-50 border border-slate-100 rounded-lg py-1.5 px-3 inline-block mx-auto font-semibold text-gray-700">
                   {alum.designation} @ <span className="text-[#003D7A]">{alum.company}</span>
                 </div>
-                <p className="text-gray-600 text-xs leading-relaxed font-light my-4 line-clamp-3">
+                <p className="text-gray-605 text-xs leading-relaxed font-light my-4 line-clamp-3">
                   "{alum.bio}"
                 </p>
                 <a 
@@ -285,7 +273,7 @@ export default async function HomePage() {
       <GalleryMasonry items={data.gallery} />
 
       {/* 9. Campus Showcase (Statically Fixed) */}
-      <section id="campuses" className="py-24 bg-slate-50 scroll-mt-16">
+      <section id="campuses" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h3 className="text-xs font-extrabold text-[#C41E3A] uppercase tracking-widest mb-3">Our Footprint</h3>

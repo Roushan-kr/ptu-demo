@@ -343,7 +343,6 @@ export async function GET() {
       { id: 'ac-1', name: 'DAV Institute of Engineering & Technology', logo: '🎓', status: 'active' },
       { id: 'ac-2', name: 'Guru Nanak Dev Engineering College', logo: '🎓', status: 'active' },
       { id: 'ac-3', name: 'Lyallpur Khalsa College of Engineering', logo: '🎓', status: 'active' },
-      { id: 'ac-4', name: 'Beant College of Engineering & Technology', logo: '🎓', status: 'active' }
     ];
 
     return NextResponse.json({

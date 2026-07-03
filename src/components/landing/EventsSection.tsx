@@ -58,7 +58,7 @@ export default function EventsSection({ events }: { events: Event[] }) {
   };
 
   return (
-    <section id="events" className="py-4 bg-white scroll-mt-4">
+    <section id="events" className="py-24 bg-gradient-to-b from-white via-slate-50/55 to-white scroll-mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
