@@ -172,9 +172,12 @@ export default async function HomePage() {
           {/* Responsive horizontal scroll wrapper on mobile, grid on desktop */}
           <div className="flex overflow-x-auto gap-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 pb-4 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] -mx-4 px-4 sm:mx-0 sm:px-0">
             {data.news.map((item: any) => (
-              <div 
+              <a
                 key={item.id}
-                className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto"
+                href="https://ptu.ac.in/news-events"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-md hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full group w-[290px] flex-shrink-0 md:w-auto cursor-pointer"
               >
                 <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
                   <img 
@@ -206,13 +209,16 @@ export default async function HomePage() {
                     <span className="text-slate-400 font-medium">📍 {item.campusTag}</span>
                   </div>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 6. Notable Alumni / Spotlight Section */}
+      {/* 6. Gallery / Memories Section */}
+      <GalleryMasonry items={data.gallery} />
+
+      {/* 7. Notable Alumni / Spotlight Section */}
       <section id="spotlight" className="py-24 bg-gradient-to-b from-white via-blue-50/15 to-white scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -262,11 +268,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 7. Testimonials Section */}
+      {/* 8. Testimonials Section */}
       <TestimonialsSection initialTestimonials={data.testimonials} />
 
-      {/* 8. Gallery / Memories Section */}
-      <GalleryMasonry items={data.gallery} />
 
       {/* 9. Campus Showcase (Statically Fixed) */}
       <section id="campuses" className="py-24 bg-gradient-to-b from-white via-slate-50/70 to-slate-100/40 scroll-mt-16">
