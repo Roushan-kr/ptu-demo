@@ -3,11 +3,45 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // 1. Fetch Hero Slides
-    const dbHeroSlides = await prisma.landingHeroSlide.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: 'asc' },
-    });
+    const [
+      dbHeroSlides,
+      dbStats,
+      dbWelcome,
+      dbEvents,
+      dbNews,
+      dbTestimonials,
+      dbGallery,
+    ] = await Promise.all([
+      prisma.landingHeroSlide.findMany({
+        where: { isActive: true },
+        orderBy: { displayOrder: 'asc' },
+      }),
+      prisma.landingStat.findMany({
+        where: { isActive: true },
+        orderBy: { displayOrder: 'asc' },
+      }),
+      prisma.landingWelcome.findFirst({
+        where: { isActive: true },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      prisma.event.findMany({
+        where: { showOnLanding: true, isPublished: true },
+        orderBy: { eventDate: 'asc' },
+      }),
+      prisma.landingNews.findMany({
+        where: { isActive: true },
+        orderBy: { publishedDate: 'desc' },
+      }),
+      prisma.landingTestimonial.findMany({
+        where: { isActive: true },
+        orderBy: { displayOrder: 'asc' },
+      }),
+      prisma.albumImage.findMany({
+        where: { showOnLanding: true },
+        orderBy: { createdAt: 'desc' },
+        include: { album: true },
+      }),
+    ]);
 
     const heroSlides = dbHeroSlides.length > 0 
       ? dbHeroSlides.map(slide => ({
@@ -45,12 +79,6 @@ export async function GET() {
           }
         ];
 
-    // 2. Fetch Stats
-    const dbStats = await prisma.landingStat.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: 'asc' },
-    });
-
     const statsList = dbStats.length > 0
       ? dbStats.map(s => ({
           number: s.number,
@@ -64,12 +92,6 @@ export async function GET() {
           { number: '45+', label: 'Countries', icon: 'Globe' },
           { number: '350+', label: 'Events Hosted', icon: 'Calendar' }
         ];
-
-    // 3. Fetch Welcome Note
-    const dbWelcome = await prisma.landingWelcome.findFirst({
-      where: { isActive: true },
-      orderBy: { updatedAt: 'desc' },
-    });
 
     const welcomeNote = dbWelcome
       ? {
@@ -86,12 +108,6 @@ export async function GET() {
           name: 'Dr. Susheel Mittal',
           designation: 'Vice Chancellor, IKGPTU',
         };
-
-    // 4. Fetch Selected Events
-    const dbEvents = await prisma.event.findMany({
-      where: { showOnLanding: true, isPublished: true },
-      orderBy: { eventDate: 'asc' },
-    });
 
     const events = dbEvents.length > 0
       ? dbEvents.map(e => ({
@@ -143,11 +159,6 @@ export async function GET() {
         ];
 
     // 5. Fetch News
-    const dbNews = await prisma.landingNews.findMany({
-      where: { isActive: true },
-      orderBy: { publishedDate: 'desc' },
-    });
-
     const news = dbNews.length > 0
       ? dbNews.map(n => ({
           id: n.id,
@@ -189,11 +200,6 @@ export async function GET() {
         ];
 
     // 6. Fetch Testimonials and notableAlumni (Spotlights)
-    const dbTestimonials = await prisma.landingTestimonial.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: 'asc' },
-    });
-
     const testimonials = dbTestimonials.filter(t => !t.isSpotlight).length > 0
       ? dbTestimonials.filter(t => !t.isSpotlight).map(t => ({
           id: t.id,
@@ -265,13 +271,7 @@ export async function GET() {
           }
         ];
 
-    // 7. Fetch Selected Gallery Images
-    const dbGallery = await prisma.albumImage.findMany({
-      where: { showOnLanding: true },
-      orderBy: { createdAt: 'desc' },
-      include: { album: true },
-    });
-
+    // 7. Selected Gallery Images
     const gallery = dbGallery.length > 0
       ? dbGallery.map((img, idx) => ({
           id: img.id,
