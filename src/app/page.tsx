@@ -11,7 +11,6 @@ import EventsSection from '@/components/landing/EventsSection';
 import TestimonialsSection from '@/components/landing/TestimonialsSection';
 import GalleryMasonry from '@/components/landing/GalleryMasonry';
 import NewsletterSignup from '@/components/landing/NewsletterSignup';
-import HomeLoader from '@/components/landing/HomeLoader';
 import LandingNav from '@/components/landing/LandingNav';
 
 async function getLandingData() {
@@ -86,9 +85,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans antialiased text-gray-900 selection:bg-[#C41E3A] selection:text-white">
-      {/* Home Loader Overlay */}
-      <HomeLoader />
-
       {/* Navigation Header */}
       <LandingNav />
 
