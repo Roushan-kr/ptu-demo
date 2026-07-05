@@ -233,7 +233,7 @@ export default function SubAdminsPage() {
                 value={formData.campusId}
                 onChange={(e) => setFormData({ ...formData, campusId: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#012140]"
+                className="w-full px-3 py-2 text-[#012140] border border-gray-300 rounded-lg focus:outline-none focus:border-[#012140]"
               >
                 <option value="">Select Campus</option>
                 {campuses.map(campus => (
@@ -339,7 +339,7 @@ export default function SubAdminsPage() {
                   value={campusForm.name}
                   onChange={(e) => setCampusForm({ ...campusForm, name: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#012140]"
+                  className="w-full text-[#012140] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#012140]"
                   placeholder="e.g., Mohali Campus"
                 />
               </div>
@@ -350,7 +350,7 @@ export default function SubAdminsPage() {
                   value={campusForm.code}
                   onChange={(e) => setCampusForm({ ...campusForm, code: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#012140]"
+                  className="w-full text-[#012140] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#012140]"
                   placeholder="e.g., mohali"
                 />
               </div>

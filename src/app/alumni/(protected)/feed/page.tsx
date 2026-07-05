@@ -1,7 +1,8 @@
 // src/app/alumni/(protected)/feed/page.tsx
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -10,7 +11,6 @@ import {
   Users, 
   Award, 
   Image as ImageIcon, 
-  Video, 
   FileText, 
   MoreHorizontal, 
   ThumbsUp, 
@@ -18,7 +18,6 @@ import {
   Rocket, 
   GraduationCap, 
   MessageCircle,
-  Play,
   Loader2,
   X
 } from 'lucide-react';
@@ -60,13 +59,10 @@ interface FeedPost {
 }
 
 export default function AlumniFeed() {
-  const [profile, setProfile] = useState<AlumniProfile | null>(null);
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(true);
   const [shareText, setShareText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
-  
+
   // Image upload states
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -76,53 +72,58 @@ export default function AlumniFeed() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const fetchFeed = async () => {
-    try {
-      const res = await fetch('/api/alumni/posts');
+  // ── Profile query (cached for 10 minutes, resolves alumni OR admin session) ──
+  const { data: profile, isLoading: profileLoading } = useQuery<AlumniProfile | null>({
+    queryKey: ['alumni-profile-me'],
+    queryFn: async () => {
+      // Try alumni session first
+      const res = await fetch('/api/alumni/me');
       if (res.ok) {
         const data = await res.json();
-        setPosts(data.posts || []);
+        return data.user as AlumniProfile;
       }
-    } catch (err) {
-      console.error('Error fetching feed posts:', err);
-    }
-  };
+      // Fall back to admin session (when admin browses the alumni portal)
+      const adminRes = await fetch('/api/admin/me');
+      if (adminRes.ok) {
+        const data = await adminRes.json();
+        return {
+          name: data.user.name,
+          email: data.user.email,
+          isAdmin: true,
+          currentRole: data.user.role,
+          college: data.user.campus?.name || 'All Campuses (Consolidated)',
+          batchYear: 0,
+          branch: '',
+        } as AlumniProfile;
+      }
+      // Neither session found — redirect to login
+      router.push('/alumni/login');
+      return null;
+    },
+    staleTime: 10 * 60 * 1000,   // 10 minutes
+    retry: false,
+  });
 
-  useEffect(() => {
-    fetch('/api/alumni/me')
-      .then(res => {
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
-      .then(data => {
-        setProfile(data.user);
-        setLoading(false);
-        fetchFeed();
-      })
-      .catch(() => {
-        // Check if there's a staff session before redirecting to alumni login
-        fetch('/api/admin/me')
-          .then(res => res.ok ? res.json() : Promise.reject())
-          .then((data) => {
-            // Staff is authenticated — show portal with admin profile metadata
-            setProfile({
-              name: data.user.name,
-              email: data.user.email,
-              isAdmin: true,
-              currentRole: data.user.role,
-              college: data.user.campus?.name || 'All Campuses (Consolidated)',
-              batchYear: 0,
-              branch: '',
-            });
-            setLoading(false);
-            fetchFeed();
-          })
-          .catch(() => {
-            router.push('/alumni/login');
-          });
-      });
-  }, [router]);
+  // ── Feed posts query (cached for 5 minutes — persists across page navigation) ──
+  const {
+    data: postsData,
+    isLoading: postsLoading,
+    refetch: refetchPosts,
+  } = useQuery<{ posts: FeedPost[] }>({
+    queryKey: ['alumni-feed-posts'],
+    queryFn: async () => {
+      const res = await fetch('/api/alumni/posts');
+      if (!res.ok) throw new Error('Failed to fetch feed');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,   // 5 minutes — won't refetch when navigating back
+    enabled: !profileLoading,   // wait until we know if user is authenticated
+  });
+
+  const posts = postsData?.posts || [];
+  const loading = profileLoading;
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -172,7 +173,8 @@ export default function AlumniFeed() {
         toast.success('Posted to community feed!');
         setShareText('');
         setUploadedImageUrl('');
-        fetchFeed();
+        // Invalidate the cached feed so new post appears immediately
+        queryClient.invalidateQueries({ queryKey: ['alumni-feed-posts'] });
       } else {
         toast.error(data.error || 'Failed to submit post');
       }
@@ -466,7 +468,26 @@ export default function AlumniFeed() {
 
         {/* Feed Posts */}
         <div className="space-y-6">
-          {posts.length > 0 ? (
+          {/* Posts loading skeleton — only on initial fetch, not on navigating back */}
+          {postsLoading ? (
+            [1, 2, 3].map((n) => (
+              <div key={n} className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-slate-200" />
+                  <div className="space-y-2 flex-1">
+                    <div className="w-1/4 h-4 bg-slate-200 rounded" />
+                    <div className="w-1/6 h-3 bg-slate-200 rounded" />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <div className="w-full h-4 bg-slate-200 rounded" />
+                  <div className="w-11/12 h-4 bg-slate-200 rounded" />
+                  <div className="w-3/4 h-4 bg-slate-200 rounded" />
+                </div>
+                <div className="h-48 bg-slate-200 rounded-xl" />
+              </div>
+            ))
+          ) : posts.length > 0 ? (
             posts.map((post) => {
               const hasLiked = likedPosts[post.id];
               const isPostAdmin = post.author?.isAdmin;

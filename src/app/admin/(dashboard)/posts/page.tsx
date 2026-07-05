@@ -440,7 +440,7 @@ export default function AdminPostsPage() {
                   value={albumTitle}
                   onChange={e => setAlbumTitle(e.target.value)}
                   placeholder="e.g., Annual Day 2025"
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#003D7A] transition"
+                  className="w-full text-[#012140] px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#003D7A] transition"
                 />
               </div>
 

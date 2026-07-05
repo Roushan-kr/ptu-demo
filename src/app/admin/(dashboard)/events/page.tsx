@@ -234,13 +234,13 @@ function AdminEventsClient() {
                 e.key === "Enter" &&
                 setParam("search", (e.target as HTMLInputElement).value)
               }
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
+              className="w-full text-[#012140] pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
             />
           </div>
           <select
             value={selectedCategory}
             onChange={(e) => setParam("category", e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
+            className="px-3 py-2 text-[#012140] border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
           >
             {allCategories.map((cat) => (
               <option key={cat} value={cat}>
@@ -372,7 +372,7 @@ function AdminEventsClient() {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
+                  className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
                   placeholder="Annual Alumni Reunion"
                 />
               </div>
@@ -389,7 +389,7 @@ function AdminEventsClient() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm resize-none"
+                  className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm resize-none"
                   placeholder="Describe the event..."
                 />
               </div>
@@ -405,7 +405,7 @@ function AdminEventsClient() {
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
+                    className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
                   >
                     {CALENDAR_CATEGORIES.map((c) => (
                       <option key={c} value={c}>
@@ -428,7 +428,7 @@ function AdminEventsClient() {
                         isPublished: e.target.value === "true",
                       })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
+                    className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
                   >
                     <option value="true">Published</option>
                     <option value="false">Draft</option>
@@ -449,7 +449,7 @@ function AdminEventsClient() {
                     onChange={(e) =>
                       setFormData({ ...formData, eventDate: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
+                    className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
                   />
                 </div>
 
@@ -464,7 +464,7 @@ function AdminEventsClient() {
                     onChange={(e) =>
                       setFormData({ ...formData, rsvpDeadline: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
+                    className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
                   />
                 </div>
               </div>
@@ -481,7 +481,7 @@ function AdminEventsClient() {
                   onChange={(e) =>
                     setFormData({ ...formData, venue: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
+                  className="w-full text-[#012140] px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
                   placeholder="e.g. PTU Main Campus, Kapurthala"
                 />
               </div>

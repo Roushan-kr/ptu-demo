@@ -308,17 +308,42 @@ export default function WebUpdatePage() {
     }
   });
 
-  // --- Events Toggle ---
+  // --- Events Toggle (Optimistic) ---
   const toggleEventMutation = useMutation({
     mutationFn: ({ id, show }: { id: string; show: boolean }) => toggleEventLandingAction(id, show),
+    onMutate: async ({ id, show }) => {
+      // Cancel any in-flight refetches
+      await queryClient.cancelQueries({ queryKey: ['landing-events'] });
+      // Snapshot current cache
+      const previous = queryClient.getQueryData(['landing-events']);
+      // Optimistically flip the checkbox in the cache
+      queryClient.setQueryData(['landing-events'], (old: any) => {
+        if (!old?.events) return old;
+        return {
+          ...old,
+          events: old.events.map((ev: any) =>
+            ev.id === id ? { ...ev, showOnLanding: show } : ev
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      // Roll back to the previous cache snapshot
+      if (context?.previous) {
+        queryClient.setQueryData(['landing-events'], context.previous);
+      }
+      toast.error('Failed to update event visibility');
+    },
     onSuccess: (res: any) => {
-      if (res.success) {
-        toast.success('Event visibility updated!');
-        invalidateKey('landing-events');
-      } else {
+      if (!res.success) {
         toast.error(res.error || 'Failed to update visibility');
       }
-    }
+    },
+    onSettled: () => {
+      // Always re-sync with server after mutation settles
+      queryClient.invalidateQueries({ queryKey: ['landing-events'] });
+    },
   });
 
   // --- News ---
@@ -383,17 +408,41 @@ export default function WebUpdatePage() {
     }
   });
 
-  // --- Gallery Toggle ---
+  // --- Gallery Toggle (Optimistic) ---
   const toggleGalleryMutation = useMutation({
     mutationFn: ({ id, show }: { id: string; show: boolean }) => toggleAlbumImageLandingAction(id, show),
+    onMutate: async ({ id, show }) => {
+      await queryClient.cancelQueries({ queryKey: ['landing-gallery'] });
+      const previous = queryClient.getQueryData(['landing-gallery']);
+      // Optimistically flip the image's showOnLanding inside nested albums
+      queryClient.setQueryData(['landing-gallery'], (old: any) => {
+        if (!old?.albums) return old;
+        return {
+          ...old,
+          albums: old.albums.map((album: any) => ({
+            ...album,
+            images: album.images?.map((img: any) =>
+              img.id === id ? { ...img, showOnLanding: show } : img
+            ),
+          })),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['landing-gallery'], context.previous);
+      }
+      toast.error('Failed to toggle image visibility');
+    },
     onSuccess: (res: any) => {
-      if (res.success) {
-        toast.success('Gallery image visibility updated!');
-        invalidateKey('landing-gallery');
-      } else {
+      if (!res.success) {
         toast.error(res.error || 'Failed to toggle visibility');
       }
-    }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['landing-gallery'] });
+    },
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -604,7 +653,7 @@ export default function WebUpdatePage() {
                           value={heroForm.headline}
                           onChange={(e) => setHeroForm((prev) => ({ ...prev, headline: e.target.value }))}
                           placeholder="e.g. Join 10,000+ Distinguished Alumni Network"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                         />
                       </div>
 
@@ -615,7 +664,7 @@ export default function WebUpdatePage() {
                           value={heroForm.subtext}
                           onChange={(e) => setHeroForm((prev) => ({ ...prev, subtext: e.target.value }))}
                           placeholder="Provide a subtext paragraph..."
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                         />
                       </div>
 
@@ -626,7 +675,7 @@ export default function WebUpdatePage() {
                             type="number"
                             value={heroForm.displayOrder}
                             onChange={(e) => setHeroForm((prev) => ({ ...prev, displayOrder: parseInt(e.target.value, 10) }))}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div className="flex items-end pb-3">
@@ -745,7 +794,7 @@ export default function WebUpdatePage() {
                         value={statForm.number}
                         onChange={(e) => setStatForm((prev) => ({ ...prev, number: e.target.value }))}
                         placeholder="e.g. 10,000+ or 6"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                        className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                       />
                     </div>
 
@@ -757,7 +806,7 @@ export default function WebUpdatePage() {
                         value={statForm.label}
                         onChange={(e) => setStatForm((prev) => ({ ...prev, label: e.target.value }))}
                         placeholder="e.g. Registered Alumni"
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                        className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                       />
                     </div>
 
@@ -766,7 +815,7 @@ export default function WebUpdatePage() {
                       <select
                         value={statForm.icon}
                         onChange={(e) => setStatForm((prev) => ({ ...prev, icon: e.target.value }))}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none bg-white"
+                        className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none bg-white"
                       >
                         {STAT_ICONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -784,7 +833,7 @@ export default function WebUpdatePage() {
                         type="number"
                         value={statForm.displayOrder}
                         onChange={(e) => setStatForm((prev) => ({ ...prev, displayOrder: parseInt(e.target.value, 10) }))}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                        className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                       />
                     </div>
                     <div className="flex items-end pb-3">
@@ -912,7 +961,7 @@ export default function WebUpdatePage() {
                           value={welcomeForm.title}
                           onChange={(e) => setWelcomeForm((prev) => ({ ...prev, title: e.target.value }))}
                           placeholder="e.g. Welcome to the IKGPTU Alumni Family"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                         />
                       </div>
 
@@ -924,7 +973,7 @@ export default function WebUpdatePage() {
                           value={welcomeForm.body}
                           onChange={(e) => setWelcomeForm((prev) => ({ ...prev, body: e.target.value }))}
                           placeholder="Write message using <p class='mb-4'>...</p> syntax to split paragraphs cleanly"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A] font-mono text-xs"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A] font-mono text-xs"
                         />
                       </div>
 
@@ -937,7 +986,7 @@ export default function WebUpdatePage() {
                             value={welcomeForm.name}
                             onChange={(e) => setWelcomeForm((prev) => ({ ...prev, name: e.target.value }))}
                             placeholder="e.g. Dr. Susheel Mittal"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                           />
                         </div>
                         <div>
@@ -948,7 +997,7 @@ export default function WebUpdatePage() {
                             value={welcomeForm.designation}
                             onChange={(e) => setWelcomeForm((prev) => ({ ...prev, designation: e.target.value }))}
                             placeholder="e.g. Vice Chancellor, IKGPTU"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                           />
                         </div>
                       </div>
@@ -1013,7 +1062,7 @@ export default function WebUpdatePage() {
                   placeholder="Search events in system..."
                   value={eventSearch}
                   onChange={(e) => setEventSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#003D7A] focus:bg-white focus:outline-none rounded-xl text-sm transition"
+                  className="w-full text-[#012140] pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#003D7A] focus:bg-white focus:outline-none rounded-xl text-sm transition"
                 />
               </div>
 
@@ -1064,7 +1113,7 @@ export default function WebUpdatePage() {
                                 year: 'numeric'
                               })}
                             </td>
-                            <td className="py-3.5 px-4 text-xs font-medium text-slate-650 truncate max-w-[200px]">
+                            <td className="py-3.5 px-4 text-xs font-medium text-[#012140] truncate max-w-[200px]">
                               {event.venue}
                             </td>
                             <td className="py-3.5 px-4">
@@ -1123,7 +1172,7 @@ export default function WebUpdatePage() {
                           value={newsForm.title}
                           onChange={(e) => setNewsForm((prev) => ({ ...prev, title: e.target.value }))}
                           placeholder="e.g. IKGPTU Bags Outstanding Placement Award"
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                         />
                       </div>
 
@@ -1135,7 +1184,7 @@ export default function WebUpdatePage() {
                           value={newsForm.summary}
                           onChange={(e) => setNewsForm((prev) => ({ ...prev, summary: e.target.value }))}
                           placeholder="Brief description showing on cards (max 200 characters)..."
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#003D7A]"
                         />
                       </div>
 
@@ -1148,7 +1197,7 @@ export default function WebUpdatePage() {
                             value={newsForm.category}
                             onChange={(e) => setNewsForm((prev) => ({ ...prev, category: e.target.value }))}
                             placeholder="e.g. Placements"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1159,7 +1208,7 @@ export default function WebUpdatePage() {
                             value={newsForm.campusTag}
                             onChange={(e) => setNewsForm((prev) => ({ ...prev, campusTag: e.target.value }))}
                             placeholder="e.g. Main Campus"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1173,7 +1222,7 @@ export default function WebUpdatePage() {
                             value={newsForm.author}
                             onChange={(e) => setNewsForm((prev) => ({ ...prev, author: e.target.value }))}
                             placeholder="Media Relations Cell"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1183,7 +1232,7 @@ export default function WebUpdatePage() {
                             required
                             value={newsForm.publishedDate}
                             onChange={(e) => setNewsForm((prev) => ({ ...prev, publishedDate: e.target.value }))}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1345,7 +1394,7 @@ export default function WebUpdatePage() {
                             value={testimonialForm.name}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, name: e.target.value }))}
                             placeholder="e.g. Amit Khurana"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1355,7 +1404,7 @@ export default function WebUpdatePage() {
                             value={testimonialForm.linkedIn}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, linkedIn: e.target.value }))}
                             placeholder="https://linkedin.com/in/username"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1367,7 +1416,7 @@ export default function WebUpdatePage() {
                             type="number"
                             value={testimonialForm.batchYear}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, batchYear: parseInt(e.target.value, 10) }))}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div className="col-span-2">
@@ -1377,7 +1426,7 @@ export default function WebUpdatePage() {
                             value={testimonialForm.branch}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, branch: e.target.value }))}
                             placeholder="Computer Science & Engineering"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1390,7 +1439,7 @@ export default function WebUpdatePage() {
                             value={testimonialForm.designation}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, designation: e.target.value }))}
                             placeholder="Co-Founder & CEO"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div>
@@ -1400,7 +1449,7 @@ export default function WebUpdatePage() {
                             value={testimonialForm.company}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, company: e.target.value }))}
                             placeholder="StellarData Systems"
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1413,7 +1462,7 @@ export default function WebUpdatePage() {
                           value={testimonialForm.quote}
                           onChange={(e) => setTestimonialForm((prev) => ({ ...prev, quote: e.target.value }))}
                           placeholder="Write the alumni testimonial or short bio..."
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                          className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                         />
                       </div>
 
@@ -1424,7 +1473,7 @@ export default function WebUpdatePage() {
                             type="number"
                             value={testimonialForm.displayOrder}
                             onChange={(e) => setTestimonialForm((prev) => ({ ...prev, displayOrder: parseInt(e.target.value, 10) }))}
-                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
+                            className="w-full text-[#012140] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none"
                           />
                         </div>
                         <div className="flex items-end pb-3">
@@ -1504,7 +1553,7 @@ export default function WebUpdatePage() {
                           </div>
                         </div>
 
-                        <p className="text-gray-650 text-xs italic leading-relaxed font-light">
+                        <p className="text-[#012140] text-xs italic leading-relaxed font-light">
                           &ldquo;{t.quote}&rdquo;
                         </p>
 
@@ -1574,7 +1623,7 @@ export default function WebUpdatePage() {
                   placeholder="Filter images by album title or caption..."
                   value={gallerySearch}
                   onChange={(e) => setEventSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#003D7A] focus:bg-white focus:outline-none rounded-xl text-sm transition"
+                  className="w-full text-[#012140] pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#003D7A] focus:bg-white focus:outline-none rounded-xl text-sm transition"
                 />
               </div>
 

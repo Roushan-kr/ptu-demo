@@ -170,11 +170,58 @@ export default function AlumniNoticeboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#003D7A] border-t-[#C41E3A] rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-600 font-semibold">Loading noticeboard…</p>
+      <div className="space-y-8 animate-pulse">
+        {/* Welcome Banner Skeleton */}
+        <div className="bg-slate-200 h-44 rounded-2xl" />
+
+        {/* Profile Quick Stats Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-100 p-5 space-y-2">
+              <div className="h-3 bg-slate-200 rounded w-1/3" />
+              <div className="h-5 bg-slate-200 rounded w-2/3" />
+            </div>
+          ))}
         </div>
+
+        {/* Upcoming Events Skeleton */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="h-6 bg-slate-200 rounded w-1/4" />
+            <div className="h-4 bg-slate-200 rounded w-12" />
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-xl border border-slate-100 overflow-hidden space-y-3 pb-4">
+                <div className="w-full h-28 bg-slate-200" />
+                <div className="px-4 space-y-2">
+                  <div className="h-3 bg-slate-200 rounded w-1/3" />
+                  <div className="h-4 bg-slate-200 rounded w-3/4" />
+                  <div className="h-3 bg-slate-200 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Job Opportunities Skeleton */}
+        <section className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="h-6 bg-slate-200 rounded w-1/4" />
+            <div className="h-4 bg-slate-200 rounded w-12" />
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex justify-between items-center p-4 rounded-xl border border-slate-100">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
+                  <div className="h-3 bg-slate-200 rounded w-1/4" />
+                </div>
+                <div className="h-8 bg-slate-200 rounded w-16" />
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     );
   }

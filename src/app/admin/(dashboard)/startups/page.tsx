@@ -132,7 +132,7 @@ function AdminStartupsClient() {
               defaultValue={search}
               onBlur={(e) => setParam('search', e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && setParam('search', (e.target as HTMLInputElement).value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
+              className="w-full text-[#012140] pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm"
             />
           </div>
 
@@ -140,7 +140,7 @@ function AdminStartupsClient() {
           <select
             value={industry}
             onChange={(e) => setParam('industry', e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
+            className="px-3 py-2 text-[#012140] border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
           >
             {industries.map((i) => (
               <option key={i} value={i}>{i}</option>
@@ -151,7 +151,7 @@ function AdminStartupsClient() {
           <select
             value={sort}
             onChange={(e) => setParam('sort', e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
+            className="px-3 py-2 text-[#012140] border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] text-sm bg-white"
           >
             <option value="newest">Newest first</option>
             <option value="name">Name A–Z</option>

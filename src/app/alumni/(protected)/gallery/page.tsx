@@ -272,7 +272,23 @@ export default function GalleryPage() {
 
         {/* Right column: Album Grid */}
         <div className="lg:col-span-9">
-          {sortedAlbums.length === 0 ? (
+          {loadingAlbums ? (
+            /* Skeleton Grid — matches the 3-col album card layout */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="space-y-2.5 animate-pulse">
+                  <div className="aspect-[4/3] rounded-2xl bg-slate-200" />
+                  <div className="px-1 space-y-2">
+                    <div className="h-4 bg-slate-200 rounded w-3/4" />
+                    <div className="flex items-center justify-between">
+                      <div className="h-3 bg-slate-200 rounded w-1/4" />
+                      <div className="h-3 bg-slate-200 rounded w-1/3" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : sortedAlbums.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center text-slate-500 font-semibold">
               No albums match your search query.
             </div>
