@@ -106,7 +106,7 @@ export default function NetworkingPage() {
               placeholder="Search by name, role, company, or city..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] focus:ring-1 focus:ring-[#003D7A]/20 text-sm transition"
+              className="w-full text-[#012140] pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#003D7A] focus:ring-1 focus:ring-[#003D7A]/20 text-sm transition"
             />
           </div>
           <button

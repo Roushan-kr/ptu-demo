@@ -165,7 +165,7 @@ export default function AdminRequestsPage() {
           
           <form onSubmit={handleSendLink} className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div>
-              <label className="block text-xs font-semibold text-gray-750">Full Name</label>
+              <label className="block text-xs font-semibold text-[#012140]">Full Name</label>
               <input
                 type="text"
                 value={inviteName}
@@ -176,7 +176,7 @@ export default function AdminRequestsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-750">Email Address</label>
+              <label className="block text-xs font-semibold text-[#012140]">Email Address</label>
               <input
                 type="email"
                 value={inviteEmail}
