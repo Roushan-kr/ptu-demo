@@ -1,4 +1,4 @@
-import { BrevoClient } from '@getbrevo/brevo'
+import nodemailer from 'nodemailer'
 
 type SendEmailArgs = {
   to: { email: string; name?: string }[]
@@ -12,7 +12,7 @@ export type SendEmailResult =
   | { ok: true }
   | { ok: false; error: unknown }
 
-function requireEnv(name: 'BREVO_API_KEY' | 'BREVO_SENDER_EMAIL' | 'BREVO_SENDER_NAME'): string {
+function requireEnv(name: 'MAIL_HOST' | 'MAIL_PORT' | 'MAIL_USERNAME' | 'MAIL_PASSWORD' | 'MAIL_FROM_ADDRESS' | 'MAIL_FROM_NAME'): string {
   const value = process.env[name]
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`)
@@ -20,36 +20,57 @@ function requireEnv(name: 'BREVO_API_KEY' | 'BREVO_SENDER_EMAIL' | 'BREVO_SENDER
   return value
 }
 
-// Optional: reuse Brevo client across calls (good for high volume)
-let cachedBrevoClient: BrevoClient | null = null
+let cachedTransporter: nodemailer.Transporter | null = null
 
-function getBrevoClient(apiKey: string): BrevoClient {
-  if (!cachedBrevoClient) {
-    cachedBrevoClient = new BrevoClient({ apiKey })
+function getSmtpTransporter(): nodemailer.Transporter {
+  if (cachedTransporter) {
+    return cachedTransporter
   }
-  return cachedBrevoClient
+
+  const host = requireEnv('MAIL_HOST')
+  const port = Number(requireEnv('MAIL_PORT'))
+  const username = requireEnv('MAIL_USERNAME')
+  const password = requireEnv('MAIL_PASSWORD')
+
+  cachedTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: {
+      user: username,
+      pass: password,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  })
+
+  return cachedTransporter
 }
 
 export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
   try {
-    const apiKey = requireEnv('BREVO_API_KEY')
-    const senderEmail = requireEnv('BREVO_SENDER_EMAIL')
-    const senderName = requireEnv('BREVO_SENDER_NAME')
+    const senderEmail = requireEnv('MAIL_FROM_ADDRESS')
+    const senderName = requireEnv('MAIL_FROM_NAME')
+    const transporter = getSmtpTransporter()
 
-    const brevo = getBrevoClient(apiKey)
-
-    await brevo.transactionalEmails.sendTransacEmail({
-      sender: { email: senderEmail, name: senderName },
-      to: args.to,
+    const mailOptions = {
+      from: `${senderName} <${senderEmail}>`,
+      to: args.to
+        .map((recipient) =>
+          recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email
+        )
+        .join(', '),
       subject: args.subject,
-      htmlContent: args.htmlContent,
-      textContent: args.textContent,
-      tags: args.tags,
-    })
+      html: args.htmlContent,
+      text: args.textContent || undefined,
+    }
+
+    await transporter.sendMail(mailOptions)
 
     return { ok: true }
   } catch (error) {
-    console.error('[BREVO] Failed to send email:', error)
+    console.error('[SMTP] Failed to send email:', error)
     return { ok: false, error }
   }
 }
